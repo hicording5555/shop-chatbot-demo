@@ -38,10 +38,11 @@ Supabase の SQL Editor で、次の順にファイル全体を実行します�
 1. `supabase/migrations/20261110120000_init.sql`
 2. `supabase/seed.sql`
 3. `supabase/migrations/20261110143000_handoff_guard.sql`
-4. Authentication でデモユーザーを3人作り、メール確認を完了する（`email_confirmed_at` が必要）
-5. `supabase/seed_members.sql`
-6. `supabase/tests/rls_isolation.sql`（成功してもロールバックされます）
-7. Edge Function `supabase/functions/handoff` をデプロイする。追加の secret は不要です。`HANDOFF_IP_SALT` が無いときは、注入済みの `SUPABASE_SERVICE_ROLE_KEY` を鍵にした HMAC-SHA256（メッセージ `handoff-ip-salt-v1`）をソルトにします。この値はログにもレスポンスにも出しません。`HANDOFF_ALLOWED_ORIGINS` が無いときは `https://shop-chatbot-demo-0lf2.onrender.com,http://localhost:5173,http://127.0.0.1:5173` を使います。どちらも環境変数があればそちらが優先されます。
+4. `supabase/migrations/20261110170000_fix_accept_handoff.sql`
+5. Authentication でデモユーザーを3人作り、メール確認を完了する（`email_confirmed_at` が必要）
+6. `supabase/seed_members.sql`
+7. `supabase/tests/rls_isolation.sql`（成功してもロールバックされます）
+8. Edge Function `supabase/functions/handoff` をデプロイする。追加の secret は不要です。`HANDOFF_IP_SALT` が無いときは、注入済みの `SUPABASE_SERVICE_ROLE_KEY` を鍵にした HMAC-SHA256（メッセージ `handoff-ip-salt-v1`）をソルトにします。この値はログにもレスポンスにも出しません。`HANDOFF_ALLOWED_ORIGINS` が無いときは `https://shop-chatbot-demo-0lf2.onrender.com,http://localhost:5173,http://127.0.0.1:5173` を使います。どちらも環境変数があればそちらが優先されます。Origin の無いリクエストは拒否します。ブラウザの `functions.invoke` は Origin を送るので、その呼び出しは通ります。
 
 `pg_cron` は Supabase の無料枠に含まれます。マイグレーションが「pg_cron を作成できませんでした」と出たら、Dashboard の Database → Extensions で pg_cron を有効にしてから、同じファイル末尾の `cron.schedule` を再実行してください。有効なら、7日より古い `handoff_requests` を毎日 03:15 UTC に削除します。
 

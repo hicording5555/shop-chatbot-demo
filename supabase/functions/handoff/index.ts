@@ -46,6 +46,12 @@ async function hashIp(ip: string, salt: string): Promise<string> {
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
+function contactOk(contact: string): boolean {
+  if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/i.test(contact)) return true;
+  const digits = contact.replace(/[^0-9]/g, '');
+  return /^[0-9+()（）\s-]+$/.test(contact) && digits.length >= 10 && digits.length <= 15;
+}
+
 function json(status: number, body: unknown, origin: string): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -57,7 +63,7 @@ Deno.serve(async (req) => {
   const origin = req.headers.get('origin') ?? '';
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders(origin) });
   if (req.method !== 'POST') return json(405, { ok: false, reason: 'invalid' }, origin);
-  if (origin && !allowedOrigins().includes(origin)) return json(403, { ok: false, reason: 'invalid' }, origin);
+  if (!origin || !allowedOrigins().includes(origin)) return json(403, { ok: false, reason: 'invalid' }, origin);
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -78,6 +84,7 @@ Deno.serve(async (req) => {
   if (!/^[0-9a-f-]{36}$/i.test(shopId) || customerName.length < 1 || customerName.length > 80 || contact.length < 5 || contact.length > 120 || question.length < 1 || question.length > 1000) {
     return json(400, { ok: false, reason: 'invalid' }, origin);
   }
+  if (!contactOk(contact)) return json(400, { ok: false, reason: 'contact_invalid' }, origin);
 
   const admin = createClient(supabaseUrl, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -102,7 +109,13 @@ Deno.serve(async (req) => {
   });
   if (inserted.error) {
     const message = inserted.error.message ?? '';
-    const reason = /rate limited/i.test(message) ? 'rate_limited' : /unavailable/i.test(message) ? 'unavailable' : 'invalid';
+    const reason = /rate[_ ]limited/i.test(message)
+      ? 'rate_limited'
+      : /contact_invalid/i.test(message)
+        ? 'contact_invalid'
+        : /unavailable/i.test(message)
+          ? 'unavailable'
+          : 'invalid';
     const status = reason === 'rate_limited' ? 429 : reason === 'unavailable' ? 403 : 400;
     return json(status, {
       ok: false,

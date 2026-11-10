@@ -304,6 +304,59 @@ end $$;
 
 reset role;
 update public.shops set plan = 'full' where slug = 'komorebi';
+set local role service_role;
+do $$
+begin
+  perform public.accept_handoff(
+    '33333333-3333-4333-8333-333333333333',
+    '形式',
+    'not-an-email',
+    '連絡先が不正',
+    repeat('cd', 16)
+  );
+  raise exception 'RLS TEST FAILED: invalid contact was accepted';
+exception
+  when check_violation then
+    if sqlerrm not like '%contact_invalid%' then
+      raise exception 'RLS TEST FAILED: expected contact_invalid, got %', sqlerrm;
+    end if;
+end $$;
+
+do $$
+declare
+  i integer;
+  created_id uuid;
+begin
+  for i in 1..5 loop
+    created_id := public.accept_handoff(
+      '33333333-3333-4333-8333-333333333333',
+      '連続',
+      '090-1111-2222',
+      'ip cap ' || i::text,
+      repeat('ef', 16)
+    );
+    if created_id is null then
+      raise exception 'RLS TEST FAILED: accept_handoff call % returned null', i;
+    end if;
+  end loop;
+  begin
+    perform public.accept_handoff(
+      '33333333-3333-4333-8333-333333333333',
+      '連続',
+      '090-1111-2222',
+      'ip cap 6',
+      repeat('ef', 16)
+    );
+    raise exception 'RLS TEST FAILED: 6th accept_handoff was allowed';
+  exception
+    when check_violation then
+      if sqlerrm not like '%rate_limited%' then
+        raise exception 'RLS TEST FAILED: expected rate_limited, got %', sqlerrm;
+      end if;
+  end;
+end $$;
+
+reset role;
 insert into auth.users (id, email, email_confirmed_at)
 values ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1', 'unconfirmed.demo@example.com', null);
 insert into public.shop_members (user_id, shop_id)

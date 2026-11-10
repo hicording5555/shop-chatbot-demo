@@ -246,6 +246,8 @@ function handoffErrorText(error: unknown): string {
   if (message === 'rate_limited' || /too many requests/i.test(message)) {
     return 'ただいま送信が集中しています。お電話かメールでお問い合わせください。';
   }
-  if (message === 'invalid') return '入力内容をご確認ください。連絡先はメールか電話番号です。';
+  if (message === 'invalid' || message === 'contact_invalid') {
+    return '入力内容をご確認ください。連絡先はメールか電話番号です。';
+  }
   return 'こちらでは受け付けられませんでした。お電話かメールでお問い合わせください。';
 }
