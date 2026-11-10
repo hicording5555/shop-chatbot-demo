@@ -1,5 +1,6 @@
 -- 認証ユーザーと架空店舗の紐づけ。
--- 先に Dashboard → Authentication → Users で、メール確認を切ったデモユーザーを3人作る。
+-- 先に Dashboard → Authentication → Users で3人作る。
+-- email_confirmed_at が入っているユーザーだけ紐づける。未確認のユーザーは無視する。
 --
 --   komorebi.demo@example.com  カフェ・こもれび
 --   lumiere.demo@example.com   ヘアサロン・ルミエール
@@ -33,10 +34,11 @@ begin
     select 1
     from auth.users as users
     where lower(users.email) = wanted.email
+      and users.email_confirmed_at is not null
   );
 
   if missing is not null then
-    raise exception '認証ユーザーが見つかりません: % 。Authentication でこのメールのユーザーを作ってから再実行してください。', missing;
+    raise exception '確認済みの認証ユーザーが見つかりません: % 。メール確認が済んでから再実行してください。', missing;
   end if;
 end $$;
 
@@ -55,5 +57,7 @@ from (
     ('lumiere.demo@example.com', '22222222-2222-4222-8222-222222222222'::uuid),
     ('yasuragi.demo@example.com', '33333333-3333-4333-8333-333333333333'::uuid)
 ) as wanted(email, shop_id)
-join auth.users as users on lower(users.email) = wanted.email
+join auth.users as users
+  on lower(users.email) = wanted.email
+ and users.email_confirmed_at is not null
 on conflict (user_id) do update set shop_id = excluded.shop_id;

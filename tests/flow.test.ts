@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { demoFaqs, demoMenu, demoShops } from '../src/data/demo-seed';
 import { apply, plainText, start, type ChatEvent } from '../src/lib/flow';
+import { splitKeywords } from '../src/lib/keywords';
+import { findSecretFindings } from '../src/lib/secrets';
 import { containsEfficacyClaim, type Catalog, type PlanId } from '../src/types';
 
 const catalog: Catalog = { shops: demoShops, faqs: demoFaqs, menu: demoMenu };
@@ -23,6 +25,7 @@ describe('plan flows', () => {
   it('shows FAQ buttons on light and menu buttons on standard', () => {
     const light = apply(start('light').state, { type: 'pick', industry: 'food' }, catalog);
     expect(light.bot.buttons.map((button) => button.label)).toContain('駐車場はありますか？');
+    expect(light.bot.buttons.map((button) => button.label)).toContain('予約したい');
     expect(light.bot.buttons.map((button) => button.label)).not.toContain('メニューを見る');
 
     const standard = apply(start('standard').state, { type: 'pick', industry: 'food' }, catalog);
@@ -43,35 +46,35 @@ describe('plan flows', () => {
   it('never confirms a reservation and links to the shop page on standard', () => {
     const typed = run('standard', 'food', { type: 'text', text: '明日の15時で予約しておいて' });
     const text = plainText(typed.bot);
-    expect(text).toContain('確定しません');
-    expect(text).toContain('https://example.com/reserve/komorebi');
+    expect(text).toContain('ネット予約');
+    expect(text).toContain('/reserve/komorebi');
     expect(text).not.toMatch(confirmed);
     expect(typed.effect).toBeUndefined();
 
     const clicked = run('full', 'salon', { type: 'button', id: 'section:reserve' });
-    expect(plainText(clicked.bot)).toContain('https://example.com/reserve/lumiere');
+    expect(plainText(clicked.bot)).toContain('/reserve/lumiere');
     expect(plainText(clicked.bot)).not.toMatch(confirmed);
   });
 
-  it('answers light reservations from the FAQ without booking', () => {
+  it('offers the same reservation page on the light plan', () => {
     const turn = run('light', 'food', { type: 'text', text: '明日の15時で予約しておいて' });
-    expect(plainText(turn.bot)).toContain('ボット内で予約は確定しません');
-    expect(plainText(turn.bot)).not.toContain('https://example.com/reserve/komorebi');
+    expect(plainText(turn.bot)).toContain('/reserve/komorebi');
+    expect(plainText(turn.bot)).not.toMatch(confirmed);
   });
 
   it('sends unknown questions to contact info, or to handoff on the full plan', () => {
     const light = run('light', 'food', { type: 'text', text: 'Wi-Fiはありますか？' });
-    expect(plainText(light.bot)).toContain('お店に直接お問い合わせください');
+    expect(plainText(light.bot)).toContain('チャットではお答えできませんでした');
     expect(light.bot.paragraphs.join('')).toContain('03-0000-1100');
 
     const full = run('full', 'food', { type: 'text', text: 'ペット連れでも大丈夫？' });
-    expect(full.bot.paragraphs).toContain('スタッフにおつなぎしますか？');
-    expect(full.bot.buttons.map((button) => button.label)).toEqual(['はい', 'いいえ（メニューに戻る）']);
+    expect(full.bot.paragraphs.join('')).toContain('スタッフに質問を送って');
+    expect(full.bot.buttons.map((button) => button.label)).toEqual(['スタッフに質問を送る', 'いいえ、最初の画面に戻る']);
 
     const bargain = run('standard', 'salon', { type: 'text', text: '値引きして' });
-    expect(plainText(bargain.bot)).toContain('お店に直接お問い合わせください');
+    expect(plainText(bargain.bot)).toContain('お電話かメールでお問い合わせください');
     const bargainFull = run('full', 'salon', { type: 'text', text: 'クレームです' });
-    expect(bargainFull.bot.buttons.map((button) => button.label)).toContain('はい');
+    expect(bargainFull.bot.buttons.map((button) => button.label)).toContain('スタッフに質問を送る');
   });
 
   it('returns jokes to the menu and gives a non-committal seitai reply', () => {
@@ -104,7 +107,33 @@ describe('plan flows', () => {
     );
     expect(saved.effect?.input.contact).toBe('090-1234-5678');
     expect(saved.effect?.input.shopId).toBe(demoShops.find((shop) => shop.industry === 'seitai')?.id);
-    expect(plainText(saved.bot)).toContain('スタッフから2営業日以内にご連絡します');
+    expect(plainText(saved.bot)).toContain('送信しました');
+    expect(plainText(saved.bot)).toContain('デモのため返信しません');
+    expect(plainText(saved.bot)).not.toContain('営業日以内');
     expect(containsEfficacyClaim(plainText(saved.bot))).toBe(false);
+  });
+
+  it('tells the visitor to pick again when an old shop button is used', () => {
+    const food = apply(start('standard').state, { type: 'pick', industry: 'food' }, catalog);
+    const faq = catalog.faqs.find((item) => item.question === 'テイクアウトはできますか？');
+    const salon = apply(food.state, { type: 'pick', industry: 'salon' }, catalog);
+    const stale = apply(salon.state, { type: 'button', id: `faq:${faq?.id}`, label: 'テイクアウトはできますか？' }, catalog);
+    expect(stale.userText).toBe('テイクアウトはできますか？');
+    expect(plainText(stale.bot)).toContain('業種を切り替えたため');
+  });
+});
+
+describe('keywords and secret scan', () => {
+  it('splits Japanese commas', () => {
+    expect(splitKeywords('ちゅうしゃじょう、車，パーキング')).toEqual(['ちゅうしゃじょう', '車', 'パーキング']);
+  });
+
+  it('flags sb_secret keys and service role JWTs', () => {
+    const header = btoa(JSON.stringify({ alg: 'none' }));
+    const body = btoa(JSON.stringify({ role: 'service_role' }));
+    const token = `${header}.${body}.sig`;
+    expect(findSecretFindings(`prefix ${'sb_' + 'secret_live'} suffix`)).toContain('supabase secret api key');
+    expect(findSecretFindings(token)).toContain('service_role jwt');
+    expect(findSecretFindings('anon key only')).toEqual([]);
   });
 });

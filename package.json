@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 0.0.0.0 --port 4173",
-    "test": "vitest run && node scripts/check-rls.mjs",
+    "test": "vitest run && vite-node scripts/scan-secrets.mjs && node scripts/check-rls.mjs",
     "test:rls": "node scripts/check-rls.mjs",
     "seed:sql": "vite-node scripts/write-seed.ts"
   },

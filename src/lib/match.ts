@@ -35,7 +35,7 @@ const CONCEPTS: { id: string; re: RegExp }[] = [
   { id: 'nominate', re: /指名|担当/ },
   { id: 'cancel', re: /キャンセル|きゃんせる|取消/ },
   { id: 'insurance', re: /保険/ },
-  { id: 'frequency', re: /頻度|週1|通院/ },
+  { id: 'frequency', re: /頻度|間隔|週1|通院/ },
   { id: 'pain', re: /痛い|ボキボキ/ },
   { id: 'first', re: /初めて|持ち物|服装|持っていけ/ },
   { id: 'wifi', re: /wifi|無線lan/ },

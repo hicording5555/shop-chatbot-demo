@@ -16,7 +16,7 @@ describe('matchFaq', () => {
 
   it('matches 子供 to the child FAQ', () => {
     const hit = matchFaq('子供連れでも大丈夫？', faqs('food'));
-    expect(hit?.question).toBe('子ども連れでも大丈夫？');
+    expect(hit?.question).toBe('子ども連れでも利用できますか？');
   });
 
   it('does not invent a FAQ for wifi or pets', () => {

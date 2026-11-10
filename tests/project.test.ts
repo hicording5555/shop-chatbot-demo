@@ -65,6 +65,8 @@ describe('env and routes', () => {
     expect(parseRoute('/demo/light')).toEqual({ name: 'demo', plan: 'light' });
     expect(parseRoute('/widget/full/')).toEqual({ name: 'widget', plan: 'full' });
     expect(parseRoute('/admin')).toEqual({ name: 'admin' });
+    expect(parseRoute('/consult')).toEqual({ name: 'consult' });
+    expect(parseRoute('/reserve/komorebi')).toEqual({ name: 'reserve', slug: 'komorebi' });
     expect(parseRoute('/missing').name).toBe('notfound');
   });
 });

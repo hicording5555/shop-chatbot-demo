@@ -1,8 +1,8 @@
 import { createAdminClient } from './lib/supabase';
 import { readEnv } from './lib/env';
 import { parseRoute } from './lib/route';
-import { mountAdmin } from './ui/admin';
-import { landingView, missingEnvView, mountDemo, notFoundView } from './ui/pages';
+import { mountAdmin, mountAdminFixture } from './ui/admin';
+import { consultView, landingView, missingEnvView, mountDemo, mountReserve, notFoundView } from './ui/pages';
 import './styles.css';
 
 const app = document.querySelector<HTMLElement>('#app');
@@ -11,7 +11,32 @@ if (!app) throw new Error('missing #app');
 function render(): void {
   const env = readEnv();
   const route = parseRoute(window.location.pathname);
+  const fixture = import.meta.env.DEV && new URLSearchParams(window.location.search).has('fixture');
   document.body.classList.toggle('widget', route.name === 'widget');
+  if (fixture && (route.name === 'demo' || route.name === 'widget' || route.name === 'admin')) {
+    void import('./data/demo-seed').then(({ demoFaqs, demoMenu, demoShops }) => {
+      if (route.name === 'admin') {
+        const shop = demoShops.find((item) => item.industry === 'seitai');
+        if (!shop || !app) return;
+        mountAdminFixture(
+          app,
+          shop,
+          demoFaqs.filter((item) => item.shopId === shop.id),
+          [],
+        );
+        return;
+      }
+      if (!app) return;
+      const url = env.ok ? env.url : 'http://127.0.0.1:54321';
+      const key = env.ok ? env.anonKey : 'fixture-anon-key';
+      mountDemo(app, route.plan, url, key, route.name === 'widget', {
+        shops: demoShops,
+        faqs: demoFaqs,
+        menu: demoMenu,
+      });
+    });
+    return;
+  }
   if (!env.ok) {
     app!.replaceChildren(missingEnvView(env.missing, env.serviceRole));
     return;
@@ -22,6 +47,14 @@ function render(): void {
   }
   if (route.name === 'notfound') {
     app!.replaceChildren(notFoundView());
+    return;
+  }
+  if (route.name === 'consult') {
+    app!.replaceChildren(consultView());
+    return;
+  }
+  if (route.name === 'reserve') {
+    mountReserve(app!, route.slug, env.url, env.anonKey);
     return;
   }
   if (route.name === 'admin') {

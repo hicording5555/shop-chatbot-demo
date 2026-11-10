@@ -1,28 +1,31 @@
-import type { Catalog, Industry, PlanId } from '../types';
+import type { Catalog, PlanId, Shop } from '../types';
 import { INDUSTRY_LABEL, PLAN_LABEL } from '../types';
 import { loadPublicCatalog } from '../data/api';
 import { createPublicClient } from '../lib/supabase';
 import { el } from './dom';
-import { mountChat } from './chat';
+import { chatSkeleton, mountChat } from './chat';
 
-const PLANS: { id: PlanId; price: string; monthly: string; points: string[] }[] = [
+const PLANS: { id: PlanId; price: string; monthly: string; audience: string; points: string[] }[] = [
   {
     id: 'light',
     price: '初期 20,000円',
     monthly: '月額 5,000円',
-    points: ['FAQボタンとキーワード検索', '答えられないときは連絡先', '予約は確定しない'],
+    audience: 'まずはよくある質問に自動で答えたいお店に',
+    points: ['よくある質問にボタンと入力で自動回答', '答えられないときはお店の電話・メールをご案内'],
   },
   {
     id: 'standard',
     price: '初期 40,000円',
     monthly: '月額 10,000円',
-    points: ['ライトの案内', 'メニュー・予約・営業時間', '予約ページへ誘導', '自店のFAQを編集'],
+    audience: '予約やメニューの案内まで任せたいお店に',
+    points: ['ライトの内容すべて', 'メニュー・営業時間・アクセスをボタンでご案内', 'お使いの予約ページへご案内', '質問と答えをお店で自由に編集'],
   },
   {
     id: 'full',
     price: '初期 80,000円',
     monthly: '月額 18,000円',
-    points: ['標準の案内', '答えられない質問を引き継ぐ', '管理画面で受信を確認', 'メールは送らない'],
+    audience: '答えられない質問もスタッフに確実につなぎたいお店に',
+    points: ['標準の内容すべて', '答えられない質問をスタッフへ引き継ぎ', '届いたお問い合わせを管理画面で一覧表示'],
   },
 ];
 
@@ -47,6 +50,7 @@ export function landingView(): HTMLElement {
   const cards = PLANS.map((plan) =>
     el('article', { class: 'plan-card' }, [
       el('h2', null, [PLAN_LABEL[plan.id]]),
+      el('p', { class: 'audience' }, [plan.audience]),
       el('p', { class: 'price' }, [plan.price]),
       el('p', { class: 'price sub' }, [`${plan.monthly}（税別）`]),
       el('ul', null, plan.points.map((point) => el('li', null, [point]))),
@@ -54,37 +58,45 @@ export function landingView(): HTMLElement {
     ]),
   );
   return el('main', { class: 'sheet' }, [
-    siteHeader(false),
+    siteHeader('/'),
     el('section', { class: 'hero' }, [
-      el('p', { class: 'eyebrow' }, ['小規模店向け・ボタンで案内するチャット']),
-      el('h1', null, ['店のよくある質問に、その場で答える']),
+      el('p', { class: 'eyebrow' }, ['飲食店・美容室・整体院向け　ホームページ用チャット']),
+      el('h1', null, ['よくある質問への対応は、チャットにおまかせ。']),
       el('p', { class: 'lede' }, [
-        'AIは使いません。選択肢とFAQのキーワード検索だけです。飲食・美容室・整体の架空店舗で、ライト・標準・充実の3つを試せます。',
+        '営業時間・メニュー・予約方法など、毎日のように聞かれる質問に、24時間ボタンひとつでお答えします。決まった答えだけを返すので、間違った案内をする心配がありません。下のデモで、飲食店・美容室・整体院の3業種をお試しください。',
+      ]),
+      el('div', { class: 'cta-row' }, [
+        el('a', { class: 'button', href: '/consult' }, ['相談・申し込み']),
+        el('a', { class: 'button ghost', href: '/demo/standard' }, ['デモを試す']),
       ]),
       el('p', { class: 'note' }, ['店名・住所・料金はすべて架空です。実在のお店とは関係ありません。']),
     ]),
     el('section', { class: 'plan-grid' }, cards),
     el('section', { class: 'panel' }, [
-      el('h2', null, ['ホームページへの埋め込み']),
-      el('p', null, ['ウィジェット用のページを iframe で置くか、埋め込みスクリプトを読み込みます。']),
-      el('pre', null, [
-        '<iframe src="https://YOUR_HOST/widget/standard" title="お店のチャット" width="380" height="640" style="border:0"></iframe>',
+      el('h2', null, ['ホームページへの設置']),
+      el('p', null, ['お使いのホームページに、コードを1行貼るだけで設置できます。']),
+      el('div', { class: 'cta-row' }, [
+        el('a', { class: 'button', href: '/consult' }, ['導入について相談する']),
       ]),
-      el('pre', null, ['<script src="https://YOUR_HOST/embed.js" data-plan="standard" defer></script>']),
-      el('p', null, ['data-plan は light / standard / full です。スクリプトは画面右下に iframe を出します。']),
     ]),
-    el('section', { class: 'panel' }, [
-      el('h2', null, ['お店の管理画面']),
-      el('p', null, ['標準と充実では、ログインしたお店が自分のFAQだけを編集できます。充実では引き継ぎの受信一覧も見えます。']),
-      el('a', { class: 'button ghost', href: '/admin' }, ['管理画面へ']),
-    ]),
+  ]);
+}
+
+export function consultView(): HTMLElement {
+  return el('main', { class: 'sheet narrow' }, [
+    siteHeader('/consult'),
+    el('p', { class: 'eyebrow' }, ['相談・申し込み']),
+    el('h1', null, ['導入について相談する']),
+    el('p', null, ['申し込みフォームは、次の段階で用意します。いまはデモで、飲食店・美容室・整体院の案内を試してください。']),
+    el('p', null, ['お使いのホームページに、コードを1行貼るだけで設置できます。']),
+    el('a', { class: 'button', href: '/demo/standard' }, ['デモを試す']),
   ]);
 }
 
 export function notFoundView(): HTMLElement {
   return el('main', { class: 'sheet narrow' }, [
-    el('h1', null, ['ページが見つかりません']),
-    el('a', { class: 'button', href: '/' }, ['トップへ戻る']),
+    el('h1', null, ['お探しのページは見つかりませんでした。']),
+    el('a', { class: 'button', href: '/' }, ['デモの一覧へ']),
   ]);
 }
 
@@ -94,9 +106,27 @@ export function mountDemo(
   supabaseUrl: string,
   anonKey: string,
   widget: boolean,
+  preset?: Catalog,
 ): void {
+  if (preset) {
+    document.body.classList.toggle('widget', widget);
+    if (widget) {
+      const frame = el('div', { class: 'widget-frame' });
+      root.replaceChildren(frame);
+      mountChat(frame, { plan, catalog: preset, supabaseUrl, anonKey });
+      return;
+    }
+    root.replaceChildren(demoLayout(plan, preset, supabaseUrl, anonKey));
+    return;
+  }
   const client = createPublicClient(supabaseUrl, anonKey);
-  root.replaceChildren(el('main', { class: 'sheet' }, [el('p', null, ['読み込み中です…'])]));
+  const skeletonHost = el('div', { class: 'chat-host' });
+  skeletonHost.append(chatSkeleton(plan));
+  root.replaceChildren(
+    widget
+      ? skeletonHost
+      : el('main', { class: 'sheet demo-page' }, [siteHeader(planPath(plan)), el('div', { class: 'demo-layout' }, [el('section', { class: 'storefront' }, [el('p', null, ['チャットを準備しています…'])]), skeletonHost])]),
+  );
   loadPublicCatalog(client)
     .then((catalog) => {
       if (catalog.shops.length === 0) {
@@ -122,37 +152,37 @@ export function mountDemo(
       const message = error instanceof Error ? error.message : '読み込めませんでした';
       root.replaceChildren(
         el('main', { class: 'sheet narrow' }, [
-          el('h1', null, ['データを読み込めませんでした']),
-          el('p', null, [message]),
-          el('p', null, ['URL・anon キー・RLSの公開読み取りを確認してください。']),
+          el('h1', null, ['ただいま表示できません']),
+          el('p', null, ['時間をおいて再読み込みしてください。']),
+          el('p', { class: 'hint' }, [message]),
         ]),
       );
     });
 }
 
 function demoLayout(plan: PlanId, catalog: Catalog, supabaseUrl: string, anonKey: string): HTMLElement {
-  const heroTitle = el('h1', null, ['架空のお店のホームページ']);
-  const heroText = el('p', null, ['右のチャットで業種を選ぶと、そのお店として案内します。予約はこのページでは確定しません。']);
+  const heroTitle = el('h1', null, ['お店のホームページ（見本）']);
+  const hours = el('p', { class: 'store-meta' }, ['チャットで業種を選ぶと、営業時間と住所がここに出ます。']);
+  const heroText = el('p', null, ['チャットで業種を選ぶと、そのお店のスタッフになったつもりでご案内します。まずは気になる業種を選んでみてください。']);
   const chatHost = el('div', { class: 'chat-host' });
   const page = el('main', { class: 'sheet demo-page' }, [
-    siteHeader(true),
+    siteHeader(planPath(plan)),
     el('div', { class: 'demo-layout' }, [
       el('section', { class: 'storefront' }, [
-        el('p', { class: 'eyebrow' }, [`${PLAN_LABEL[plan]}プランのデモ`]),
+        el('p', { class: 'eyebrow' }, [`${PLAN_LABEL[plan]}プランの見本`]),
         heroTitle,
+        hours,
         heroText,
         el('ul', { class: 'store-points' }, [
-          el('li', null, ['ランチも、カットも、整体の予約も、ボットの中では確定しません。']),
-          el('li', null, ['自由入力はFAQのキーワードで探します。誤字や話し言葉もある程度吸収します。']),
-          el('li', null, ['整体の文面は、治る・改善する・効く、といった断定をしません。']),
+          el('li', null, ['ボタンを押すだけで、営業時間・メニュー・予約方法をご案内します']),
+          el('li', null, ['「駐車場ある？」のような話し言葉の質問にも、登録した答えでお返しします']),
+          el('li', null, ['答えが決まっていない質問には、無理に答えずお店へおつなぎします']),
         ]),
         el('h2', null, ['このプランでできること']),
         el('ul', null, PLANS.find((item) => item.id === plan)!.points.map((point) => el('li', null, [point]))),
-        el('h2', null, ['埋め込み']),
-        el('p', null, ['同じチャットを iframe でも開けます。']),
-        el('p', null, [
-          el('a', { href: `/widget/${plan}`, target: '_blank', rel: 'noreferrer' }, ['ウィジェットだけを開く']),
-        ]),
+        el('h2', null, ['お店のホームページに置くとこう見えます']),
+        el('p', null, [el('a', { href: `/widget/${plan}` }, ['チャットだけの表示を見る'])]),
+        plan === 'light' ? el('p', null, ['']) : adminSample(),
       ]),
       chatHost,
     ]),
@@ -163,28 +193,87 @@ function demoLayout(plan: PlanId, catalog: Catalog, supabaseUrl: string, anonKey
     supabaseUrl,
     anonKey,
     onIndustry(industry) {
-      heroTitle.textContent = industry ? shopTitle(catalog, industry) : '架空のお店のホームページ';
-      heroText.textContent = industry
-        ? `${INDUSTRY_LABEL[industry]}として案内しています。内容はデモ用の作り話です。`
-        : '右のチャットで業種を選ぶと、そのお店として案内します。予約はこのページでは確定しません。';
+      const shop = catalog.shops.find((item) => item.industry === industry);
+      heroTitle.textContent = shop?.name ?? 'お店のホームページ（見本）';
+      hours.textContent = shop ? `${shop.hours}　定休日 ${shop.closedDays}　${shop.address}` : 'チャットで業種を選ぶと、営業時間と住所がここに出ます。';
+      heroText.textContent = shop
+        ? `${INDUSTRY_LABEL[industry!]}の見本です。料金も住所も架空です。`
+        : 'チャットで業種を選ぶと、そのお店のスタッフになったつもりでご案内します。まずは気になる業種を選んでみてください。';
     },
   });
   return page;
 }
 
-function shopTitle(catalog: Catalog, industry: Industry): string {
-  return catalog.shops.find((shop) => shop.industry === industry)?.name ?? '架空のお店';
+function adminSample(): HTMLElement {
+  return el('aside', { class: 'admin-sample' }, [
+    el('h2', null, ['お店の管理画面（見本）']),
+    el('p', { class: 'hint' }, ['ご契約のお店は、ログインして質問と答えを直せます。これは見本です。']),
+    el('article', { class: 'faq-card' }, [
+      el('h3', null, ['駐車場はありますか？']),
+      el('p', null, ['お店の前に2台分あります。']),
+      el('p', { class: 'hint' }, ['チャットに表示中']),
+    ]),
+  ]);
 }
 
-function siteHeader(compact: boolean): HTMLElement {
+export function mountReserve(root: HTMLElement, slug: string, supabaseUrl: string, anonKey: string): void {
+  const client = createPublicClient(supabaseUrl, anonKey);
+  root.replaceChildren(el('main', { class: 'sheet narrow' }, [el('p', null, ['チャットを準備しています…'])]));
+  loadPublicCatalog(client)
+    .then((catalog) => {
+      const shop = catalog.shops.find((item) => item.slug === slug);
+      root.replaceChildren(reserveView(shop));
+    })
+    .catch(() => {
+      root.replaceChildren(reserveView(undefined));
+    });
+}
+
+function reserveView(shop: Shop | undefined): HTMLElement {
+  const name = shop?.name ?? '架空のお店';
+  const note = el('p', { class: 'note', role: 'status' });
+  note.hidden = true;
+  const form = el('form', { class: 'stack' }, [
+    el('label', { class: 'field' }, ['ご希望の日時', el('input', { type: 'text', placeholder: '例：明日 15:00' })]),
+    el('label', { class: 'field' }, ['人数', el('input', { type: 'text', placeholder: '例：2名' })]),
+    el('button', { class: 'button', type: 'submit' }, ['この内容で仮の確認をする']),
+  ]) as HTMLFormElement;
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    note.hidden = false;
+    note.textContent = 'これは見本ページです。予約は確定していません。実際の導入時は、ここにお店の予約ページ（ホットペッパーグルメなど）が開きます。';
+  });
+  return el('main', { class: 'sheet narrow' }, [
+    siteHeader(''),
+    el('p', { class: 'eyebrow' }, ['ネット予約の見本']),
+    el('h1', null, [name]),
+    el('p', null, ['このページはデモです。送信しても予約は保存されず、お店には届きません。']),
+    el('p', null, ['実際の導入時は、ここにお店の予約ページ（ホットペッパーグルメなど）が開きます。']),
+    shop ? el('p', null, [`電話：${shop.phone}`]) : el('p', null, ['お店のデータを読み込めませんでした。']),
+    form,
+    note,
+    el('p', null, [el('a', { href: '/demo/standard' }, ['チャットのデモへ戻る'])]),
+  ]);
+}
+
+function planPath(plan: PlanId): string {
+  return `/demo/${plan}`;
+}
+
+function siteHeader(current: string): HTMLElement {
+  const links: [string, string][] = [
+    ['/demo/light', 'ライト'],
+    ['/demo/standard', '標準'],
+    ['/demo/full', '充実'],
+    ['/admin', '管理'],
+  ];
   return el('header', { class: 'site-header' }, [
     el('a', { class: 'brand', href: '/' }, ['店ボット']),
-    el('nav', { class: 'nav' }, [
-      el('a', { href: '/demo/light' }, ['ライト']),
-      el('a', { href: '/demo/standard' }, ['標準']),
-      el('a', { href: '/demo/full' }, ['充実']),
-      el('a', { href: '/admin' }, ['管理']),
-    ]),
-    compact ? el('span', { class: 'header-note' }, ['架空のデモ']) : el('span', null, ['']),
+    el('nav', { class: 'nav' }, links.map(([href, label]) => {
+      const attrs: Record<string, string> = { href };
+      if (href === current) attrs['aria-current'] = 'page';
+      return el('a', attrs, [label]);
+    })),
+    el('span', { class: 'header-note' }, ['架空のデモ']),
   ]);
 }

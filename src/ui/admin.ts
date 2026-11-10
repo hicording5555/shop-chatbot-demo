@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { containsEfficacyClaim, type Shop } from '../types';
 import { mapFaq, mapShop, type HandoffRow } from '../data/api';
+import { splitKeywords } from '../lib/keywords';
 import { el } from './dom';
 
 interface FaqDraft {
@@ -10,6 +11,18 @@ interface FaqDraft {
   keywords: string;
   published: boolean;
   sortOrder: number;
+}
+
+export function mountAdminFixture(root: HTMLElement, shop: Shop, faqs: ReturnType<typeof mapFaq>[], handoffs: HandoffRow[]): void {
+  const client = {
+    from: () => ({
+      update: () => ({ eq: () => Promise.resolve({ error: null }) }),
+      insert: () => Promise.resolve({ error: null }),
+      delete: () => ({ eq: () => Promise.resolve({ error: null }) }),
+    }),
+    auth: { signOut: () => Promise.resolve() },
+  } as unknown as SupabaseClient;
+  root.replaceChildren(adminView(client, root, 'owner@example.com', shop, faqs, handoffs));
 }
 
 export function mountAdmin(root: HTMLElement, client: SupabaseClient): void {
@@ -47,7 +60,7 @@ function loginView(client: SupabaseClient, root: HTMLElement): HTMLElement {
       .then(({ error }) => {
         if (error) {
           message.hidden = false;
-          message.textContent = 'ログインできませんでした。メールとパスワード、メール確認の設定を見てください。';
+          message.textContent = 'メールアドレスかパスワードが違います。もう一度お確かめください。';
           return;
         }
         mountAdmin(root, client);
@@ -60,7 +73,7 @@ function loginView(client: SupabaseClient, root: HTMLElement): HTMLElement {
   return el('main', { class: 'sheet narrow' }, [
     el('p', { class: 'eyebrow' }, ['お店の管理']),
     el('h1', null, ['ログイン']),
-    el('p', null, ['このアカウントに紐づいたお店のFAQだけを編集できます。']),
+    el('p', null, ['ご契約のお店専用です。管理画面の見本は各デモページでご覧いただけます。']),
     form,
     el('p', null, [el('a', { href: '/' }, ['トップへ戻る'])]),
   ]);
@@ -115,14 +128,14 @@ function adminView(
     ]),
     el('p', { class: 'eyebrow' }, ['FAQ編集']),
     el('h1', null, [shop.name]),
-    el('p', null, ['このお店の質問だけが表示されています。他店のデータは読み書きできません。']),
+    el('p', null, ['お客さんによく聞かれる質問と答えを、ここで追加・修正できます。変更はすぐにチャットに反映されます。']),
     status,
-    editorForm(null, shop, status, client, root),
     el('h2', null, ['登録済みの質問']),
     list,
+    addSlot(shop, status, client, root),
     el('h2', null, ['スタッフへの引き継ぎ']),
-    el('p', { class: 'note' }, ['充実プランのデモから送られた内容です。メールは送信しません。データベースに保存し、ここだけで見ます。']),
-    handoffTable(handoffs),
+    el('p', { class: 'note' }, ['届いた質問の一覧です。メールは送信しません。7日を過ぎた行は自動で消えます。']),
+    handoffCards(handoffs, client, root),
   ]);
 }
 
@@ -136,18 +149,25 @@ function editorForm(
   const question = el('input', { type: 'text', maxlength: '200', required: 'true', value: current?.question ?? '' }) as HTMLInputElement;
   const answer = el('textarea', { maxlength: '2000', required: 'true' }, []) as HTMLTextAreaElement;
   answer.value = current?.answer ?? '';
-  const keywords = el('input', { type: 'text', value: current?.keywords ?? '', placeholder: 'カンマ区切り（任意）' }) as HTMLInputElement;
-  const sort = el('input', { type: 'number', min: '0', value: String(current?.sortOrder ?? 0) }) as HTMLInputElement;
+  const keywords = el('input', { type: 'text', value: current?.keywords ?? '', placeholder: '例：ちゅうしゃじょう、車、パーキング' }) as HTMLInputElement;
   const published = el('input', { type: 'checkbox' }) as HTMLInputElement;
   published.checked = current?.published ?? true;
+  const actions = el('div', { class: 'row' }, [
+    el('button', { class: 'button', type: 'submit' }, [current?.id ? '更新する' : '追加する']),
+  ]);
+  if (current?.id) {
+    const cancel = el('button', { class: 'button ghost', type: 'button' }, ['キャンセル']) as HTMLButtonElement;
+    cancel.addEventListener('click', () => form.remove());
+    actions.append(cancel);
+  }
   const form = el('form', { class: 'stack editor' }, [
     el('h2', null, [current?.id ? '質問を編集' : '質問を追加']),
     el('label', { class: 'field' }, ['質問', question]),
     el('label', { class: 'field' }, ['答え', answer]),
-    el('label', { class: 'field' }, ['検索キーワード', keywords]),
-    el('label', { class: 'field' }, ['並び順', sort]),
-    el('label', { class: 'check' }, [published, '公開する']),
-    el('button', { class: 'button', type: 'submit' }, [current?.id ? '更新する' : '追加する']),
+    el('label', { class: 'field' }, ['言い換えのことば（任意）', keywords]),
+    el('p', { class: 'hint' }, ['お客さんが使いそうな言い方を、読点（、）で区切って入れてください']),
+    el('label', { class: 'check' }, [published, 'チャットに表示する']),
+    actions,
   ]) as HTMLFormElement;
   form.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -160,9 +180,9 @@ function editorForm(
     const payload = {
       question: question.value.trim(),
       answer: answer.value.trim(),
-      keywords: keywords.value.split(',').map((item) => item.trim()).filter(Boolean).slice(0, 20),
+      keywords: splitKeywords(keywords.value),
       published: published.checked,
-      sort_order: Number(sort.value) || 0,
+      sort_order: current?.sortOrder ?? 0,
     };
     const request = current?.id
       ? client.from('faqs').update(payload).eq('id', current.id)
@@ -192,8 +212,10 @@ function faqCard(
   const card = el('article', { class: 'faq-card' }, [
     el('h3', null, [faq.question]),
     el('p', null, [faq.answer]),
-    el('p', { class: 'hint' }, [faq.published ? '公開中' : '非公開', `／並び ${faq.sortOrder}`]),
+    el('p', { class: 'hint' }, [faq.published ? 'チャットに表示中' : '非公開（チャットに出ません）']),
     el('div', { class: 'row' }, [
+      button('上へ', () => moveFaq(client, root, faq.id, Math.max(0, faq.sortOrder - 1))),
+      button('下へ', () => moveFaq(client, root, faq.id, faq.sortOrder + 1)),
       button('編集', () => {
         body.replaceChildren(
           editorForm(
@@ -212,7 +234,7 @@ function faqCard(
           ),
         );
       }),
-      button('削除', () => {
+      dangerButton('削除', () => {
         if (!window.confirm('この質問を削除しますか？')) return;
         client
           .from('faqs')
@@ -233,26 +255,41 @@ function faqCard(
   return card;
 }
 
-function handoffTable(rows: HandoffRow[]): HTMLElement {
+function addSlot(shop: Shop, status: HTMLElement, client: SupabaseClient, root: HTMLElement): HTMLElement {
+  const slot = el('div', { class: 'stack' });
+  const open = el('button', { class: 'button', type: 'button' }, ['＋ 質問を追加']) as HTMLButtonElement;
+  open.addEventListener('click', () => {
+    slot.replaceChildren(editorForm(null, shop, status, client, root));
+  });
+  return el('div', { class: 'stack' }, [open, slot]);
+}
+
+function moveFaq(client: SupabaseClient, root: HTMLElement, id: string, sortOrder: number): void {
+  client.from('faqs').update({ sort_order: sortOrder }).eq('id', id).then(() => mountAdmin(root, client));
+}
+
+function handoffCards(rows: HandoffRow[], client: SupabaseClient, root: HTMLElement): HTMLElement {
   if (rows.length === 0) return el('p', null, ['まだ問い合わせはありません。']);
-  const table = el('table', { class: 'grid' }, [
-    el('thead', null, [
-      el('tr', null, [th('日時'), th('お名前'), th('連絡先'), th('質問')]),
-    ]),
-  ]);
-  const tbody = el('tbody', null);
+  const list = el('div', { class: 'faq-admin' });
   for (const row of rows) {
-    tbody.append(
-      el('tr', null, [
-        td(new Date(row.created_at).toLocaleString('ja-JP')),
-        td(row.customer_name),
-        td(row.contact),
-        td(row.question),
+    const remove = button('削除', () => {
+      if (!window.confirm('この問い合わせを削除しますか？')) return;
+      client.from('handoff_requests').delete().eq('id', row.id).then(({ error }) => {
+        if (error) return;
+        mountAdmin(root, client);
+      });
+    });
+    remove.classList.add('danger');
+    list.append(
+      el('article', { class: 'handoff-card' }, [
+        el('p', { class: 'hint' }, [new Date(row.created_at).toLocaleString('ja-JP')]),
+        el('p', null, [`${row.customer_name}　${row.contact}`]),
+        el('p', null, [row.question]),
+        remove,
       ]),
     );
   }
-  table.append(tbody);
-  return table;
+  return list;
 }
 
 function logoutButton(client: SupabaseClient, root: HTMLElement): HTMLButtonElement {
@@ -269,12 +306,10 @@ function button(label: string, onClick: () => void): HTMLButtonElement {
   return node;
 }
 
-function th(text: string): HTMLElement {
-  return el('th', null, [text]);
-}
-
-function td(text: string): HTMLElement {
-  return el('td', null, [text]);
+function dangerButton(label: string, onClick: () => void): HTMLButtonElement {
+  const node = button(label, onClick);
+  node.classList.add('danger');
+  return node;
 }
 
 function errorText(error: unknown): string {

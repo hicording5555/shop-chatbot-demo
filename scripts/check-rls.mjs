@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { PGlite } from '@electric-sql/pglite';
 
 const root = new URL('..', import.meta.url);
@@ -8,7 +8,8 @@ const prelude = `
 create schema if not exists auth;
 create table if not exists auth.users (
   id uuid primary key,
-  email text unique
+  email text unique,
+  email_confirmed_at timestamptz
 );
 create or replace function auth.uid()
 returns uuid
@@ -41,15 +42,20 @@ grant execute on function auth.uid() to anon, authenticated, service_role;
 `;
 
 const users = `
-insert into auth.users (id, email) values
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1', 'komorebi.demo@example.com'),
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2', 'lumiere.demo@example.com'),
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3', 'yasuragi.demo@example.com');
+insert into auth.users (id, email, email_confirmed_at) values
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1', 'komorebi.demo@example.com', now()),
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2', 'lumiere.demo@example.com', now()),
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3', 'yasuragi.demo@example.com', now());
 `;
 
 const db = new PGlite();
 await db.exec(prelude);
-await db.exec(read('supabase/migrations/20261110120000_init.sql'));
+const migrations = readdirSync(new URL('supabase/migrations/', root))
+  .filter((name) => name.endsWith('.sql'))
+  .sort();
+for (const name of migrations) {
+  await db.exec(read(`supabase/migrations/${name}`));
+}
 await db.exec(read('supabase/seed.sql'));
 await db.exec(users);
 await db.exec(read('supabase/seed_members.sql'));

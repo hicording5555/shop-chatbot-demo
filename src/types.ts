@@ -16,6 +16,8 @@ export interface Shop {
   id: string;
   slug: string;
   industry: Industry;
+  /** サーバーが参照する契約プラン。埋め込みの data-plan とは別。 */
+  plan: PlanId;
   name: string;
   published: boolean;
   phone: string;

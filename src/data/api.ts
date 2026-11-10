@@ -1,10 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Catalog, Faq, Industry, MenuItem, Shop, ShopExtra } from '../types';
+import { createPublicClient } from '../lib/supabase';
+import type { Catalog, Faq, Industry, MenuItem, PlanId, Shop, ShopExtra } from '../types';
 
 interface ShopRow {
   id: string;
   slug: string;
   industry: Industry;
+  plan?: PlanId;
   name: string;
   published: boolean;
   phone: string;
@@ -48,6 +50,7 @@ export function mapShop(row: ShopRow): Shop {
     id: row.id,
     slug: row.slug,
     industry: row.industry,
+    plan: row.plan ?? 'light',
     name: row.name,
     published: row.published,
     phone: row.phone,
@@ -122,30 +125,29 @@ export async function insertHandoff(
   anonKey: string,
   input: { shopId: string; customerName: string; contact: string; question: string },
 ): Promise<void> {
-  // return=minimal にしないと、anon に select が無いため PostgREST が返却行を読めず失敗する。
-  const response = await fetch(`${supabaseUrl}/rest/v1/handoff_requests`, {
-    method: 'POST',
-    headers: {
-      apikey: anonKey,
-      Authorization: `Bearer ${anonKey}`,
-      'Content-Type': 'application/json',
-      Prefer: 'return=minimal',
-    },
-    body: JSON.stringify({
+  const client = createPublicClient(supabaseUrl, anonKey);
+  const { data, error } = await client.functions.invoke('handoff', {
+    body: {
       shop_id: input.shopId,
       customer_name: input.customerName,
       contact: input.contact,
       question: input.question,
-    }),
+    },
   });
-  if (!response.ok) {
-    let message = response.statusText;
-    try {
-      const body = (await response.json()) as { message?: string };
-      if (body.message) message = body.message;
-    } catch {
-      message = response.statusText;
+  if (error) {
+    let reason = 'unavailable';
+    const context = (error as { context?: Response }).context;
+    if (context) {
+      try {
+        const body = (await context.json()) as { reason?: string };
+        if (body.reason) reason = body.reason;
+      } catch {
+        reason = 'unavailable';
+      }
     }
-    throw new Error(message);
+    throw new Error(reason);
+  }
+  if (data && typeof data === 'object' && 'ok' in data && data.ok === false) {
+    throw new Error(typeof data.reason === 'string' ? data.reason : 'unavailable');
   }
 }

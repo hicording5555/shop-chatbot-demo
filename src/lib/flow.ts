@@ -42,11 +42,17 @@ export interface Turn {
 
 export type ChatEvent =
   | { type: 'pick'; industry: Industry }
-  | { type: 'button'; id: string }
+  | { type: 'button'; id: string; label?: string }
   | { type: 'text'; text: string }
   | { type: 'handoff'; draft: HandoffDraft };
 
-const LIGHT_RICH = new Set<Intent['kind']>(['reserve', 'hours', 'access', 'menu', 'recommend', 'crowd']);
+const LIGHT_RICH = new Set<Intent['kind']>(['hours', 'access', 'recommend', 'crowd']);
+
+export const DEMO_DISCLAIMER = 'デモのため返信しません。実在の個人情報は入力しないでください。';
+
+export function reservePath(shop: Shop): string {
+  return `/reserve/${shop.slug}`;
+}
 
 const CONFIRMED_RESERVATION = /予約しました|確定しました|承りました|お取りしました|予約を確定しました/;
 
@@ -74,6 +80,7 @@ export function industryButtons(): ChatButton[] {
 export function homeButtons(plan: PlanId, industry: Industry, faqs: Faq[]): ChatButton[] {
   if (plan === 'light') {
     return [
+      { id: 'section:reserve', label: '予約したい' },
       ...faqs
         .filter((faq) => faq.published)
         .slice()
@@ -139,7 +146,7 @@ export function apply(state: ChatState, event: ChatEvent, catalog: Catalog): Tur
   if (event.type === 'handoff') {
     return submitHandoff(state, shop, event.draft);
   }
-  return answerButton(state, shop, faqs, menu, event.id);
+  return answerButton(state, shop, faqs, menu, event.id, event.type === 'button' ? event.label : undefined);
 }
 
 function pickIndustry(plan: PlanId, industry: Industry, catalog: Catalog): Turn {
@@ -159,11 +166,11 @@ function pickIndustry(plan: PlanId, industry: Industry, catalog: Catalog): Turn 
   return {
     state: { plan, industry, mode: 'chat' },
     userText: INDUSTRY_LABEL[industry],
-    bot: emptyBot([`${shop.name}のご案内です。`, intro], homeButtons(plan, industry, faqs)),
+    bot: emptyBot([`ここから${INDUSTRY_LABEL[industry]}のご案内です。`, `${shop.name}です。`, intro], homeButtons(plan, industry, faqs)),
   };
 }
 
-function answerButton(state: ChatState, shop: Shop, faqs: Faq[], menu: MenuItem[], id: string): Turn {
+function answerButton(state: ChatState, shop: Shop, faqs: Faq[], menu: MenuItem[], id: string, label?: string): Turn {
   const next = { ...state, mode: 'chat' as const };
   if (id === 'section:reserve') {
     return { state: next, userText: '予約したい', bot: reservationMessage(state.plan, shop) };
@@ -187,7 +194,7 @@ function answerButton(state: ChatState, shop: Shop, faqs: Faq[], menu: MenuItem[
     return { state: next, userText: 'よくある質問', bot: faqList(state.plan, faqs) };
   }
   if (id === 'back:home') {
-    return { state: next, userText: 'メニューに戻る', bot: homeAgain(state.plan, shop, faqs) };
+    return { state: next, userText: '最初の画面に戻る', bot: homeAgain(state.plan, shop, faqs) };
   }
   if (id.startsWith('menu-cat:')) {
     const category = id.slice('menu-cat:'.length);
@@ -196,17 +203,24 @@ function answerButton(state: ChatState, shop: Shop, faqs: Faq[], menu: MenuItem[
   if (id.startsWith('faq:')) {
     const faq = faqs.find((item) => item.id === id.slice(4) && item.published);
     if (!faq) {
-      return { state: next, userText: '質問', bot: unknownMessage(state.plan, shop) };
+      return {
+        state: next,
+        userText: label && label !== '質問' ? label : '選んだ質問',
+        bot: emptyBot(
+          ['業種を切り替えたため、この質問は使えません。下のボタンから選び直してください。'],
+          homeButtons(state.plan, shop.industry, faqs),
+        ),
+      };
     }
     return { state: next, userText: faq.question, bot: faqMessage(state.plan, shop, faq) };
   }
-  if (id === 'handoff:yes' && state.plan === 'full') {
+  if (id === 'handoff:yes' && state.plan === 'full' && shop.plan === 'full') {
     return {
       state: { ...state, mode: 'handoff-form' },
-      userText: 'はい',
+      userText: 'スタッフに質問を送る',
       bot: {
-        paragraphs: ['お名前、連絡先（メールまたは電話）、質問内容を入力してください。'],
-        buttons: [{ id: 'handoff:no', label: 'いいえ（メニューに戻る）' }],
+        paragraphs: ['スタッフからお返事するため、以下をご記入ください。', DEMO_DISCLAIMER],
+        buttons: [],
         links: [],
         menu: [],
         form: true,
@@ -214,7 +228,7 @@ function answerButton(state: ChatState, shop: Shop, faqs: Faq[], menu: MenuItem[
     };
   }
   if (id === 'handoff:no') {
-    return { state: next, userText: 'いいえ（メニューに戻る）', bot: homeAgain(state.plan, shop, faqs) };
+    return { state: next, userText: '送らずに最初の画面に戻る', bot: homeAgain(state.plan, shop, faqs) };
   }
   return { state: next, bot: homeAgain(state.plan, shop, faqs) };
 }
@@ -226,6 +240,13 @@ function answerText(state: ChatState, shop: Shop, faqs: Faq[], menu: MenuItem[],
     return { state: next, bot: emptyBot(['ご質問を入力してください。'], homeButtons(state.plan, shop.industry, faqs)) };
   }
   let intent = interpret(trimmed, shop.industry, faqs);
+  if (state.plan === 'light' && intent.kind === 'menu') {
+    return {
+      state: next,
+      userText: trimmed,
+      bot: emptyBot(['メニューと料金は、お店のホームページでご確認ください。'], homeButtons(state.plan, shop.industry, faqs)),
+    };
+  }
   if (state.plan === 'light' && LIGHT_RICH.has(intent.kind)) {
     const faq = matchFaq(trimmed, faqs);
     intent = faq ? { kind: 'faq', faq } : { kind: 'unknown' };
@@ -243,16 +264,16 @@ function messageForIntent(
 ): BotMessage {
   switch (intent.kind) {
     case 'empty':
-      return emptyBot(['文章が読み取れませんでした。ボタンを選ぶか、質問を入力してください。'], homeButtons(plan, shop.industry, faqs));
+      return emptyBot(['すみません、うまく読み取れませんでした。下のボタンから選ぶか、ことばで質問してください。'], homeButtons(plan, shop.industry, faqs));
     case 'greeting':
       return emptyBot(['こんにちは。下のボタンか、質問の入力でご案内します。'], homeButtons(plan, shop.industry, faqs));
     case 'medical':
       return medicalMessage(plan, shop);
     case 'complaint':
-      return plan === 'full' ? handoffAsk() : contactMessage(shop, 'その内容はこちらではお受けできません。お店に直接お問い合わせください。');
+      return plan === 'full' && shop.plan === 'full' ? handoffAsk() : contactMessage(shop);
     case 'cross':
       return emptyBot(
-        [`こちらは${shop.name}（${INDUSTRY_LABEL[shop.industry]}）です。`, '別の業種のご質問にはお答えできません。下のボタンからご案内します。'],
+        [`申し訳ありません。こちらは${shop.name}のご案内です。`, '下のボタンから、当店についてお調べいただけます。'],
         homeButtons(plan, shop.industry, faqs),
       );
     case 'reserve':
@@ -271,7 +292,7 @@ function messageForIntent(
     case 'recommend':
       return recommendMessage(shop, menu);
     case 'offtopic':
-      return emptyBot(['その話題にはお答えできません。お店のご案内に戻ります。'], homeButtons(plan, shop.industry, faqs));
+      return emptyBot(['申し訳ありません。こちらではお店のご案内のみ承っています。'], homeButtons(plan, shop.industry, faqs));
     case 'faq':
       return faqMessage(plan, shop, intent.faq);
     case 'unknown':
@@ -282,8 +303,8 @@ function messageForIntent(
 }
 
 function submitHandoff(state: ChatState, shop: Shop, draft: HandoffDraft): Turn {
-  if (state.plan !== 'full') {
-    return { state: { ...state, mode: 'chat' }, bot: contactMessage(shop, 'お店に直接お問い合わせください。') };
+  if (state.plan !== 'full' || shop.plan !== 'full') {
+    return { state: { ...state, mode: 'chat' }, bot: contactMessage(shop) };
   }
   const validated = validateHandoff(shop.id, draft);
   if (!validated.ok) {
@@ -291,7 +312,7 @@ function submitHandoff(state: ChatState, shop: Shop, draft: HandoffDraft): Turn 
       state: { ...state, mode: 'handoff-form' },
       bot: {
         paragraphs: [validated.message],
-        buttons: [{ id: 'handoff:no', label: 'いいえ（メニューに戻る）' }],
+        buttons: [{ id: 'handoff:no', label: '送らずに最初の画面に戻る' }],
         links: [],
         menu: [],
         form: true,
@@ -301,8 +322,8 @@ function submitHandoff(state: ChatState, shop: Shop, draft: HandoffDraft): Turn 
   return {
     state: { ...state, mode: 'chat' },
     bot: emptyBot(
-      ['受け付けました。', `スタッフから${shop.handoffBusinessDays}営業日以内にご連絡します。`],
-      [{ id: 'back:home', label: 'メニューに戻る' }],
+      ['送信しました。お問い合わせありがとうございます。', DEMO_DISCLAIMER],
+      [{ id: 'back:home', label: '最初の画面に戻る' }],
     ),
     effect: { type: 'insert-handoff', input: validated.value },
   };
@@ -311,12 +332,13 @@ function submitHandoff(state: ChatState, shop: Shop, draft: HandoffDraft): Turn 
 export function reservationMessage(plan: PlanId, shop: Shop): BotMessage {
   const message = emptyBot(
     [
-      'このチャットでは予約を確定しません。',
-      '人数や日時の指定もここでは受け付けていません。下の予約ページからお手続きください。',
+      'ご予約は、下のネット予約のページから承っています。',
+      '空き状況の確認や、日時・人数のご指定も予約ページでできます。',
+      '（デモでは見本ページが開きます）',
     ],
     [backButton(plan)],
   );
-  message.links = [{ href: shop.reservationUrl, label: shop.reservationLabel }];
+  message.links = [{ href: reservePath(shop), label: 'ネット予約のページを開く' }];
   assertNoFalseConfirmation(message);
   return message;
 }
@@ -330,7 +352,7 @@ function hoursMessage(shop: Shop, withAccess: boolean): BotMessage {
   if (shop.extra.lastBooking) lines.push(shop.extra.lastBooking);
   if (shop.extra.seats) lines.push(shop.extra.seats);
   if (shop.extra.staff) lines.push(shop.extra.staff);
-  const message = emptyBot(lines, [{ id: 'back:home', label: 'メニューに戻る' }]);
+  const message = emptyBot(lines, [{ id: 'back:home', label: '最初の画面に戻る' }]);
   if (withAccess) {
     message.paragraphs.push(`住所：${shop.address}`, shop.accessText, shop.parking);
     message.links.push({ href: shop.mapUrl, label: '地図を開く' });
@@ -345,7 +367,7 @@ function hoursAndAccess(shop: Shop): BotMessage {
 function accessMessage(shop: Shop): BotMessage {
   return {
     paragraphs: [`住所：${shop.address}`, shop.accessText, `駐車場：${shop.parking}`],
-    buttons: [{ id: 'back:home', label: 'メニューに戻る' }],
+    buttons: [{ id: 'back:home', label: '最初の画面に戻る' }],
     links: [{ href: shop.mapUrl, label: '地図を開く' }],
     menu: [],
     form: false,
@@ -353,8 +375,18 @@ function accessMessage(shop: Shop): BotMessage {
 }
 
 function firstVisitMessage(shop: Shop): BotMessage {
-  const text = shop.extra.firstVisit ?? '動きやすい服装でお越しください。';
-  return emptyBot([safeSeitaiCopy(shop, text)], [{ id: 'back:home', label: 'メニューに戻る' }]);
+  const message = emptyBot(
+    [
+      'はじめての方へのご案内です。',
+      '①ご予約：下のボタンからご予約ください。',
+      '②当日：動きやすい服装でお越しください。お着替えもご用意しています。',
+      '③カウンセリング：お体の気になるところや、ご希望を伺います。',
+      '初回料金：カウンセリング＋整体（60分）5,500円',
+    ],
+    [{ id: 'back:home', label: '最初の画面に戻る' }],
+  );
+  message.links = [{ href: reservePath(shop), label: 'ネット予約のページを開く' }];
+  return message;
 }
 
 function menuRoot(shop: Shop, menu: MenuItem[]): BotMessage {
@@ -372,14 +404,14 @@ function menuRoot(shop: Shop, menu: MenuItem[]): BotMessage {
           { id: 'menu-cat:perm', label: 'パーマ' },
           { id: 'menu-cat:other', label: 'その他' },
         ];
-  return emptyBot(['見たい種類を選んでください。'], [...categories, { id: 'back:home', label: 'メニューに戻る' }]);
+  return emptyBot(['見たい種類を選んでください。'], [...categories, { id: 'back:home', label: '最初の画面に戻る' }]);
 }
 
 function menuList(shop: Shop, menu: MenuItem[], category: string): BotMessage {
   const rows = menu.filter((item) => item.category === category);
   const message = emptyBot(
     rows.length ? [`${categoryLabel(category)}のご案内です。価格は税込です。`] : ['該当するメニューがありません。'],
-    [{ id: 'back:home', label: 'メニューに戻る' }],
+    [{ id: 'back:home', label: '最初の画面に戻る' }],
   );
   message.menu = rows.map((item) => ({
     name: safeSeitaiCopy(shop, item.name),
@@ -395,7 +427,7 @@ function recommendMessage(shop: Shop, menu: MenuItem[]): BotMessage {
     shop.industry === 'seitai'
       ? '初めての方には初回のメニューをご案内しています。合うかどうかは来院時にご相談ください。'
       : '一例です。お好みや人数はスタッフへご相談ください。';
-  const message = emptyBot([safeSeitaiCopy(shop, lead)], [{ id: 'back:home', label: 'メニューに戻る' }]);
+  const message = emptyBot([safeSeitaiCopy(shop, lead)], [{ id: 'back:home', label: '最初の画面に戻る' }]);
   message.menu = sample.map((item) => ({
     name: safeSeitaiCopy(shop, item.name),
     priceText: item.priceText,
@@ -407,9 +439,9 @@ function recommendMessage(shop: Shop, menu: MenuItem[]): BotMessage {
 function crowdMessage(shop: Shop): BotMessage {
   const message = emptyBot(
     ['いまの混雑や空きは、このチャットではわかりません。', '予約ページで空きをご確認ください。'],
-    [{ id: 'back:home', label: 'メニューに戻る' }],
+    [{ id: 'back:home', label: '最初の画面に戻る' }],
   );
-  message.links = [{ href: shop.reservationUrl, label: shop.reservationLabel }];
+  message.links = [{ href: reservePath(shop), label: 'ネット予約のページを開く' }];
   assertNoFalseConfirmation(message);
   return message;
 }
@@ -425,7 +457,10 @@ function faqList(plan: PlanId, faqs: Faq[]): BotMessage {
 }
 
 function faqMessage(plan: PlanId, shop: Shop, faq: Faq): BotMessage {
-  return emptyBot([safeSeitaiCopy(shop, faq.answer)], [backButton(plan)]);
+  const message = emptyBot([safeSeitaiCopy(shop, faq.answer)], [backButton(plan)]);
+  const aboutReserve = faq.keywords.includes('予約') || faq.question.includes('予約');
+  if (aboutReserve) message.links = [{ href: reservePath(shop), label: 'ネット予約のページを開く' }];
+  return message;
 }
 
 function medicalMessage(plan: PlanId, shop: Shop): BotMessage {
@@ -436,11 +471,8 @@ function medicalMessage(plan: PlanId, shop: Shop): BotMessage {
     ],
     [backButton(plan)],
   );
-  if (plan === 'light') {
-    message.paragraphs.push('お店に直接お問い合わせください。', `電話：${shop.phone}`);
-  } else {
-    message.links.push({ href: shop.reservationUrl, label: shop.reservationLabel });
-  }
+  message.links.push({ href: reservePath(shop), label: 'ネット予約のページを開く' });
+  message.paragraphs.push(`お電話でもご相談いただけます。${shop.phone}`);
   for (const paragraph of message.paragraphs) {
     if (containsEfficacyClaim(paragraph)) {
       throw new Error('medical reply contains an efficacy claim');
@@ -449,10 +481,15 @@ function medicalMessage(plan: PlanId, shop: Shop): BotMessage {
   return message;
 }
 
-function contactMessage(shop: Shop, lead: string): BotMessage {
+function contactMessage(shop: Shop): BotMessage {
   return {
-    paragraphs: [lead, `電話：${shop.phone}`, `メール：${shop.email}`, `住所：${shop.address}`],
-    buttons: [{ id: 'back:home', label: 'メニューに戻る' }],
+    paragraphs: [
+      '申し訳ありません。このご質問には、チャットではお答えできませんでした。',
+      'お手数ですが、お電話かメールでお問い合わせください。',
+      `電話：${shop.phone}`,
+      `メール：${shop.email}`,
+    ],
+    buttons: [{ id: 'back:home', label: '最初の画面に戻る' }],
     links: [
       { href: `tel:${shop.phone.replace(/-/g, '')}`, label: '電話する' },
       { href: `mailto:${shop.email}`, label: 'メールする' },
@@ -463,15 +500,18 @@ function contactMessage(shop: Shop, lead: string): BotMessage {
 }
 
 function unknownMessage(plan: PlanId, shop: Shop): BotMessage {
-  if (plan === 'full') return handoffAsk();
-  return contactMessage(shop, 'お店に直接お問い合わせください。');
+  if (plan === 'full' && shop.plan === 'full') return handoffAsk();
+  return contactMessage(shop);
 }
 
 function handoffAsk(): BotMessage {
-  return emptyBot(['この質問には、用意しているご案内ではお答えできません。', 'スタッフにおつなぎしますか？'], [
-    { id: 'handoff:yes', label: 'はい' },
-    { id: 'handoff:no', label: 'いいえ（メニューに戻る）' },
-  ]);
+  return emptyBot(
+    ['申し訳ありません。このご質問には、チャットではお答えできませんでした。', 'スタッフに質問を送って、あとでお返事を受け取りますか？'],
+    [
+      { id: 'handoff:yes', label: 'スタッフに質問を送る' },
+      { id: 'handoff:no', label: 'いいえ、最初の画面に戻る' },
+    ],
+  );
 }
 
 function homeAgain(plan: PlanId, shop: Shop, faqs: Faq[]): BotMessage {
@@ -479,9 +519,8 @@ function homeAgain(plan: PlanId, shop: Shop, faqs: Faq[]): BotMessage {
   return emptyBot([intro], homeButtons(plan, shop.industry, faqs));
 }
 
-function backButton(plan: PlanId): ChatButton {
-  if (plan === 'light') return { id: 'back:home', label: '質問一覧へ戻る' };
-  return { id: 'back:home', label: 'メニューに戻る' };
+function backButton(_plan: PlanId): ChatButton {
+  return { id: 'back:home', label: '最初の画面に戻る' };
 }
 
 function categoryLabel(category: string): string {

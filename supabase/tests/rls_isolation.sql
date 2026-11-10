@@ -175,41 +175,21 @@ exception
     null;
 end $$;
 
+do $$
+begin
+  insert into public.handoff_requests (shop_id, customer_name, contact, question)
+  values ('11111111-1111-4111-8111-111111111111', '山田', '090-0000-0000', '駐車場を確認したい');
+  raise exception 'RLS TEST FAILED: anon direct insert was allowed';
+exception
+  when insufficient_privilege then
+    null;
+end $$;
+
+reset role;
 insert into public.handoff_requests (shop_id, customer_name, contact, question)
 values ('11111111-1111-4111-8111-111111111111', '山田', '090-0000-0000', '駐車場を確認したい');
-
 insert into public.handoff_requests (shop_id, customer_name, contact, question)
 values ('22222222-2222-4222-8222-222222222222', '佐藤', 'sato@example.com', 'カットの空きは？');
-
-do $$
-begin
-  insert into public.handoff_requests (shop_id, customer_name, contact, question)
-  values ('11111111-1111-4111-8111-111111111111', '短い', 'abc', '質問');
-  raise exception 'RLS TEST FAILED: short contact was accepted';
-exception
-  when check_violation then
-    null;
-end $$;
-
-do $$
-begin
-  insert into public.handoff_requests (shop_id, customer_name, contact, question)
-  values ('11111111-1111-4111-8111-111111111111', '長い', 'long@example.com', repeat('あ', 1001));
-  raise exception 'RLS TEST FAILED: oversized question was accepted';
-exception
-  when check_violation then
-    null;
-end $$;
-
-do $$
-begin
-  insert into public.handoff_requests (shop_id, customer_name, contact, question)
-  values ('99999999-9999-4999-8999-999999999999', '誰', 'who@example.com', '存在しない店');
-  raise exception 'RLS TEST FAILED: handoff for an unknown shop was accepted';
-exception
-  when insufficient_privilege or foreign_key_violation then
-    null;
-end $$;
 
 set local role authenticated;
 select public._rls_as(current_setting('test.food_user'));
@@ -226,27 +206,116 @@ select public._rls_expect(
   'salon user saw the food handoff'
 );
 
-set local role anon;
-select set_config('request.jwt.claims', '{"role":"anon"}', true);
-select set_config('request.jwt.claim.sub', '', true);
+set local role authenticated;
+select public._rls_as(current_setting('test.food_user'));
+delete from public.handoff_requests where question = '駐車場を確認したい';
+select public._rls_expect(
+  (select count(*) from public.handoff_requests where question = '駐車場を確認したい') = 0,
+  'food user should delete their own handoff'
+);
 
+reset role;
+insert into public.handoff_requests (shop_id, customer_name, contact, question)
+values ('11111111-1111-4111-8111-111111111111', '山田', '090-0000-0000', '二件目');
+set local role authenticated;
+select public._rls_as(current_setting('test.salon_user'));
 do $$
 declare
-  i integer;
+  removed integer;
 begin
-  for i in 1..30 loop
-    insert into public.handoff_requests (shop_id, customer_name, contact, question)
-    values ('33333333-3333-4333-8333-333333333333', '連続', '090-1111-2222', '混雑テスト ' || i::text);
-  end loop;
-  begin
-    insert into public.handoff_requests (shop_id, customer_name, contact, question)
-    values ('33333333-3333-4333-8333-333333333333', '超過', '090-1111-3333', '多すぎる');
-    raise exception 'RLS TEST FAILED: handoff rate limit did not trip';
-  exception
-    when insufficient_privilege then
-      null;
-  end;
+  delete from public.handoff_requests where question = '二件目';
+  get diagnostics removed = row_count;
+  if removed <> 0 then
+    raise exception 'RLS TEST FAILED: salon user deleted a food handoff';
+  end if;
 end $$;
+
+do $$
+begin
+  update public.shops set industry = 'salon' where id = '22222222-2222-4222-8222-222222222222';
+  raise exception 'RLS TEST FAILED: shop updated industry';
+exception
+  when insufficient_privilege then
+    null;
+end $$;
+do $$
+begin
+  update public.shops set slug = 'stolen' where id = '22222222-2222-4222-8222-222222222222';
+  raise exception 'RLS TEST FAILED: shop updated slug';
+exception
+  when insufficient_privilege then
+    null;
+end $$;
+do $$
+begin
+  update public.shops set published = false where id = '22222222-2222-4222-8222-222222222222';
+  raise exception 'RLS TEST FAILED: shop updated published';
+exception
+  when insufficient_privilege then
+    null;
+end $$;
+do $$
+begin
+  update public.shops set extra = jsonb_build_object('blob', repeat('a', 9000)) where id = '22222222-2222-4222-8222-222222222222';
+  raise exception 'RLS TEST FAILED: oversized extra was stored';
+exception
+  when check_violation then
+    null;
+end $$;
+do $$
+begin
+  update public.shops set map_url = 'http://example.com/map' where id = '22222222-2222-4222-8222-222222222222';
+  raise exception 'RLS TEST FAILED: non-https url was stored';
+exception
+  when check_violation then
+    null;
+end $$;
+
+reset role;
+update public.shops set plan = 'light' where slug = 'komorebi';
+set local role authenticated;
+select public._rls_as(current_setting('test.food_user'));
+do $$
+begin
+  insert into public.faqs (shop_id, question, answer)
+  values ('11111111-1111-4111-8111-111111111111', 'ライトでは書けない', 'だめ');
+  raise exception 'RLS TEST FAILED: light plan faq write was allowed';
+exception
+  when insufficient_privilege then
+    null;
+end $$;
+
+reset role;
+set local role service_role;
+do $$
+begin
+  perform public.accept_handoff(
+    '11111111-1111-4111-8111-111111111111',
+    '山田',
+    '090-0000-0000',
+    'ライト店への引き継ぎ',
+    repeat('ab', 16)
+  );
+  raise exception 'RLS TEST FAILED: handoff allowed for a light plan shop';
+exception
+  when insufficient_privilege then
+    null;
+end $$;
+
+reset role;
+update public.shops set plan = 'full' where slug = 'komorebi';
+insert into auth.users (id, email, email_confirmed_at)
+values ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1', 'unconfirmed.demo@example.com', null);
+insert into public.shop_members (user_id, shop_id)
+select users.id, '11111111-1111-4111-8111-111111111111'::uuid
+from auth.users as users
+where lower(users.email) = 'unconfirmed.demo@example.com'
+  and users.email_confirmed_at is not null
+on conflict (user_id) do update set shop_id = excluded.shop_id;
+select public._rls_expect(
+  (select count(*) from public.shop_members where user_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1') = 0,
+  'unconfirmed user was linked'
+);
 
 reset role;
 update public.shops set published = false where slug = 'lumiere';

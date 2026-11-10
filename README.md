@@ -37,15 +37,19 @@ Supabase の SQL Editor で、次の順にファイル全体を実行します�
 
 1. `supabase/migrations/20261110120000_init.sql`
 2. `supabase/seed.sql`
-3. Authentication でデモユーザーを3人作る（次の節）
-4. `supabase/seed_members.sql`
-5. `supabase/tests/rls_isolation.sql`（成功してもロールバックされます）
+3. `supabase/migrations/20261110143000_handoff_guard.sql`
+4. Authentication でデモユーザーを3人作り、メール確認を完了する（`email_confirmed_at` が必要）
+5. `supabase/seed_members.sql`
+6. `supabase/tests/rls_isolation.sql`（成功してもロールバックされます）
+7. Edge Function `supabase/functions/handoff` をデプロイし、secret `HANDOFF_IP_SALT` を設定する
+
+`pg_cron` は Supabase の無料枠に含まれます。マイグレーションが「pg_cron を作成できませんでした」と出たら、Dashboard の Database → Extensions で pg_cron を有効にしてから、同じファイル末尾の `cron.schedule` を再実行してください。有効なら、7日より古い `handoff_requests` を毎日 03:15 UTC に削除します。
 
 `seed.sql` をやり直すと3店舗が消えて作り直され、FAQ・メニュー・引き継ぎ・紐づけも消えます。そのあとは `seed_members.sql` をもう一度実行します。
 
 ## 認証ユーザーと店舗の紐づけ
 
-Dashboard → Authentication → Providers → Email で、デモ中は Confirm email をオフにするとすぐログインできます。
+Dashboard → Authentication → Users → Add user でユーザーを作ります。Auto Confirm をオンにすると `email_confirmed_at` が入り、`seed_members.sql` が紐づけます。未確認のユーザーは紐づけません。公開サインアップを止める設定は、このリポジトリの外で行います。
 
 Users → Add user で次の3人を作ります。パスワードは各自で決め、リポジトリに書かないでください。
 
@@ -117,7 +121,7 @@ npm run preview
 ## データの守られ方
 
 - `anon` は公開中の店舗・メニュー・公開FAQを読むだけです
-- `anon` は引き継ぎを insert できますが select はできません。長さと連絡先の形は CHECK、1店舗あたり1時間30件で打ち切ります
+- `anon` は引き継ぎを insert できません。送信は Edge Function `handoff` だけが行い、サービスロールで `public.accept_handoff` を呼びます。IP はソルト付きハッシュで、1時間に5件までです。店舗ごとには1時間30件の上限もあります。プランが `full` の店だけ受け付けます
 - ログインユーザーは `shop_members` で紐づいた店の行だけです。参照は `private.current_shop_ids()`（security definer、`search_path` 空）です
 - ヘルパー関数は `private` にあります。Data API の Exposed schemas に `private` を追加しないでください
 - 認可に `user_metadata` は使っていません

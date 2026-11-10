@@ -16,5 +16,6 @@ export function el<K extends keyof HTMLElementTagNameMap>(
 
 export function safeHref(href: string): string | null {
   if (/^(https?:\/\/|tel:|mailto:)/i.test(href)) return href;
+  if (href.startsWith('/') && !href.startsWith('//')) return href;
   return null;
 }
