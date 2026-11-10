@@ -1,0 +1,22 @@
+(function () {
+  var script = document.currentScript;
+  var plan = (script && script.getAttribute('data-plan')) || 'standard';
+  if (plan !== 'light' && plan !== 'standard' && plan !== 'full') plan = 'standard';
+  var src = script && script.src ? script.src : window.location.href;
+  var origin = new URL(src, window.location.href).origin;
+  var iframe = document.createElement('iframe');
+  iframe.src = origin + '/widget/' + plan;
+  iframe.title = 'お店のチャット';
+  iframe.setAttribute('loading', 'lazy');
+  iframe.style.position = 'fixed';
+  iframe.style.right = '16px';
+  iframe.style.bottom = '16px';
+  iframe.style.width = 'min(380px, calc(100vw - 24px))';
+  iframe.style.height = 'min(640px, calc(100vh - 24px))';
+  iframe.style.border = '0';
+  iframe.style.borderRadius = '18px';
+  iframe.style.boxShadow = '0 16px 40px rgba(36, 28, 20, 0.28)';
+  iframe.style.zIndex = '2147483000';
+  iframe.style.background = '#fffaf3';
+  document.body.appendChild(iframe);
+})();

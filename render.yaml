@@ -1,0 +1,26 @@
+# 無料の静的サイトだけ。Postgres / Key Value / ディスク / 有料プランは作らない。
+services:
+  - type: web
+    name: shop-chatbot-demo
+    runtime: static
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_SUPABASE_URL
+        value: https://ofpaiegiilfxloprmcwi.supabase.co
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /embed.js
+        name: Cache-Control
+        value: public, max-age=300
+      - path: /*
+        name: Content-Security-Policy
+        value: frame-ancestors *
