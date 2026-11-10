@@ -52,7 +52,7 @@ export function landingView(): HTMLElement {
     el('article', { class: 'plan-card' }, [
       el('h2', null, [PLAN_LABEL[plan.id]]),
       el('p', { class: 'audience' }, plan.id === 'standard'
-        ? ['予約やメニュー案内まで', el('br'), '任せたいお店向け']
+        ? ['予約やメニュー案内まで', el('br', null), '任せたいお店向け']
         : [plan.audience]),
       el('p', { class: 'price' }, [plan.price]),
       el('p', { class: 'price sub' }, [`${plan.monthly}（税別）`]),
@@ -107,8 +107,8 @@ export function privacyView(): HTMLElement {
     el('p', null, ['導入のご相談への回答と、ご契約の準備のためだけに使います。案内メールは、希望した人にだけ送ります。自動返信メールは送りません。']),
     el('h2', null, ['委託先']),
     el('p', null, ['データベースは Supabase、確認用のウィジェットは Cloudflare Turnstile、このサイトの配信は Render に委託しています。法令に基づく場合を除き、同意なく第三者へ提供しません。']),
-    el('h2', null, ['外国にある第三者への提供']),
-    el('p', null, ['相談内容と引き継ぎは Supabase に保存します。保存先のリージョンは【Supabaseの保存リージョン】です。Cloudflare Turnstile と Render は、それぞれのネットワークで通信を扱います。']),
+    el('h2', null, ['国外での取り扱い']),
+    el('p', null, ['相談内容と引き継ぎは、Supabase の日本（東京リージョン、ap-northeast-1）に保存します。Supabase は米国の会社です。Cloudflare Turnstile と Render は、日本の外で通信を扱うことがあります。']),
     el('h2', null, ['保管期間']),
     el('p', null, ['相談・申し込みは90日で消します。スタッフへの引き継ぎは7日で消します。IPをハッシュした回数の記録は1日で消します。']),
     el('h2', null, ['開示・訂正・削除の請求']),

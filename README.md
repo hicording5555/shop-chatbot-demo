@@ -51,7 +51,7 @@ Supabase の SQL Editor で、次の順にファイル全体を実行します�
 
 Turnstile のサイトキーは公開鍵です。本番の初期値は `0x4AAAAAAF7FrmGh7EBiJfGh`（`shop-chatbot-demo-0lf2.onrender.com` 向け、Managed）で、コードに入っています。`VITE_TURNSTILE_SITE_KEY` があればそちらを使います。`localhost` と `127.0.0.1` では、ホスト名が違うため Cloudflare の常時合格テストキー `1x00000000000000000000AA` を使います。
 
-秘密鍵はリポジトリに置きません。Supabase の Function secret `TURNSTILE_SECRET_KEY` にだけ入れてください。ログにも出しません。`TURNSTILE_REQUIRED` の初期値はオフです。オフのあいだはトークンを確認しません。`1` / `true` / `on` / `yes` のときは siteverify（`remoteip` 付き）で確認します。このとき秘密鍵が未設定なら、テスト秘密鍵には戻さず `403` の `captcha_failed` で拒否します。秘密鍵を入れたあと、`TURNSTILE_REQUIRED` を `true` にして `handoff` と `consult` を再デプロイしてください。
+秘密鍵はリポジトリに置きません。Supabase の Function secret `TURNSTILE_SECRET_KEY` にだけ入れてください。ログにも出しません。コード上の `TURNSTILE_REQUIRED` の初期値はオフです。未設定のあいだはトークンを確認しません。本番の Supabase では `TURNSTILE_REQUIRED` はすでにオンです。`1` / `true` / `on` / `yes` のときは siteverify（`remoteip` 付き）で確認します。このとき秘密鍵が未設定なら、テスト秘密鍵には戻さず `403` の `captcha_failed` で拒否します。
 
 相談の送信は `public.consult_requests` に残します。自動では消しません。IP の回数だけ、引き継ぎの IP 回数とともに、1日より古い行を毎日 03:15 UTC に消します。引き継ぎの本文は、これまでどおり7日より古い行を消します。相談への自動返信メールは送りません。
 
