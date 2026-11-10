@@ -20,6 +20,6 @@
     "typescript": "^5.9.3",
     "vite": "^6.4.1",
     "vite-node": "^6.0.0",
-    "vitest": "^5.1.0"
+    "vitest": "5.1.0"
   }
 }

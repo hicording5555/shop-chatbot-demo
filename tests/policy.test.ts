@@ -3,6 +3,7 @@ import {
   TURNSTILE_TEST_SECRET,
   contactOk,
   japanesePhoneOk,
+  handoffPublicContacts,
   neutralizeFormula,
   parseOrigins,
   turnstileRequired,
@@ -78,18 +79,30 @@ describe('turnstile', () => {
 describe('input guards', () => {
   it('rejects all-same Japanese phone digits', () => {
     expect(japanesePhoneOk('0000000000')).toBe(false);
+    expect(contactOk('0000000000')).toBe(false);
     expect(japanesePhoneOk('090-1111-2222')).toBe(true);
     expect(contactOk('owner@example.com')).toBe(true);
     expect(contactOk('000-0000-0000')).toBe(false);
   });
 
   it('prefixes spreadsheet formulas', () => {
+    expect(neutralizeFormula('=HYPERLINK("https://example.invalid")')).toBe('\'=HYPERLINK("https://example.invalid")');
     expect(neutralizeFormula('=SUM(1)')).toBe("'=SUM(1)");
     expect(neutralizeFormula('+81')).toBe("'+81");
     expect(neutralizeFormula('-10')).toBe("'-10");
     expect(neutralizeFormula('@cmd')).toBe("'@cmd");
     expect(neutralizeFormula('\t=1')).toBe("'\t=1");
     expect(neutralizeFormula('山田')).toBe('山田');
+  });
+
+  it('returns shop contacts only for a published full plan', () => {
+    expect(handoffPublicContacts({ published: false, plan: 'full', phone: '03-0000-0000', email: 'a@example.com' })).toEqual({});
+    expect(handoffPublicContacts({ published: true, plan: 'light', phone: '03-0000-0000', email: 'a@example.com' })).toEqual({});
+    expect(handoffPublicContacts({ published: true, plan: 'full', phone: '03-0000-3300', email: 'yasuragi@example.com' })).toEqual({
+      phone: '03-0000-3300',
+      email: 'yasuragi@example.com',
+    });
+    expect(handoffPublicContacts(null)).toEqual({});
   });
 
   it('defaults origins to the production site only', () => {

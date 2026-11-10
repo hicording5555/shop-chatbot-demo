@@ -286,6 +286,34 @@ exception
   when insufficient_privilege then
     null;
 end $$;
+do $$
+begin
+  insert into public.menu_items (shop_id, category, name, price_text)
+  values ('11111111-1111-4111-8111-111111111111', 'cafe', 'ライトでは書けない', '100円');
+  raise exception 'RLS TEST FAILED: light plan menu write was allowed';
+exception
+  when insufficient_privilege then
+    if sqlerrm not like '%plan%' then
+      raise exception 'RLS TEST FAILED: expected plan rejection for menu, got %', sqlerrm;
+    end if;
+end $$;
+update public.shops set name = 'こもれび（テスト）' where id = '11111111-1111-4111-8111-111111111111';
+select public._rls_expect(
+  (select name from public.shops where id = '11111111-1111-4111-8111-111111111111') = 'こもれび（テスト）',
+  'light shop should still rename itself'
+);
+do $$
+begin
+  update public.shops
+  set hours = '9:00〜10:00', access_text = 'テスト入口'
+  where id = '11111111-1111-4111-8111-111111111111';
+  raise exception 'RLS TEST FAILED: light plan changed hours and access';
+exception
+  when insufficient_privilege then
+    if sqlerrm not like '%standard plan required%' then
+      raise exception 'RLS TEST FAILED: expected standard plan required, got %', sqlerrm;
+    end if;
+end $$;
 
 reset role;
 set local role service_role;
@@ -303,16 +331,6 @@ exception
   when insufficient_privilege then
     null;
 end $$;
-do $$
-begin
-  insert into public.menu_items (shop_id, category, name, price_text)
-  values ('11111111-1111-4111-8111-111111111111', 'cafe', 'ライトでは書けない', '100円');
-  raise exception 'RLS TEST FAILED: light plan menu write was allowed';
-exception
-  when insufficient_privilege then
-    null;
-end $$;
-
 reset role;
 select set_config('request.jwt.claim.role', '', true);
 select set_config('request.jwt.claims', '', true);
@@ -449,6 +467,13 @@ exception
       raise exception 'RLS TEST FAILED: expected contact_invalid, got %', sqlerrm;
     end if;
 end $$;
+select public.accept_handoff(
+  '33333333-3333-4333-8333-333333333333',
+  '式',
+  '090-3333-4444',
+  '=HYPERLINK("https://example.invalid")',
+  repeat('15', 16)
+);
 select public.accept_consult(
   '=cmd',
   '飲食店',
@@ -473,6 +498,10 @@ select set_config('request.jwt.claims', '', true);
 select public._rls_expect(
   (select customer_name from public.handoff_requests where question = 'formula') = '''=SUM(1)',
   'formula prefix missing on handoff'
+);
+select public._rls_expect(
+  (select question from public.handoff_requests where contact = '090-3333-4444') = '''=HYPERLINK("https://example.invalid")',
+  'hyperlink formula was stored raw'
 );
 select public._rls_expect(
   (select shop_name from public.consult_requests) = '''=cmd',
@@ -509,6 +538,66 @@ begin
 exception
   when insufficient_privilege then
     null;
+end $$;
+
+reset role;
+select set_config('request.jwt.claim.role', '', true);
+select set_config('request.jwt.claims', '', true);
+revoke update on table public.shops from authenticated;
+grant update (plan) on table public.shops to authenticated;
+set local role authenticated;
+select public._rls_as(current_setting('test.food_user'));
+do $$
+begin
+  update public.shops set plan = 'light' where id = '11111111-1111-4111-8111-111111111111';
+  raise exception 'RLS TEST FAILED: plan change passed the role check';
+exception
+  when insufficient_privilege then
+    if sqlerrm not like '%immutable shop column%' then
+      raise exception 'RLS TEST FAILED: expected immutable shop column, got %', sqlerrm;
+    end if;
+end $$;
+
+reset role;
+select set_config('request.jwt.claim.role', '', true);
+select set_config('request.jwt.claims', '', true);
+delete from public.handoff_requests where shop_id = '33333333-3333-4333-8333-333333333333';
+set local role service_role;
+do $$
+declare
+  i integer;
+  created_id uuid;
+begin
+  for i in 1..200 loop
+    created_id := public.accept_handoff(
+      '33333333-3333-4333-8333-333333333333',
+      '上限',
+      '090-1111-2222',
+      'shop cap ' || i::text,
+      lpad(i::text, 32, 'a')
+    );
+    if created_id is null then
+      raise exception 'RLS TEST FAILED: shop cap call % returned null', i;
+    end if;
+  end loop;
+  if (select count(*) from public.handoff_requests where shop_id = '33333333-3333-4333-8333-333333333333') <> 200 then
+    raise exception 'RLS TEST FAILED: expected 200 handoffs before the shop cap';
+  end if;
+  begin
+    perform public.accept_handoff(
+      '33333333-3333-4333-8333-333333333333',
+      '上限',
+      '090-1111-2222',
+      'shop cap 201',
+      lpad('201', 32, 'b')
+    );
+    raise exception 'RLS TEST FAILED: 201st handoff was allowed';
+  exception
+    when check_violation then
+      if sqlerrm not like '%rate_limited%' then
+        raise exception 'RLS TEST FAILED: expected rate_limited at 201, got %', sqlerrm;
+      end if;
+  end;
 end $$;
 
 reset role;

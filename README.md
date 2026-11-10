@@ -39,11 +39,12 @@ Supabase の SQL Editor で、次の順にファイル全体を実行します�
 2. `supabase/seed.sql`
 3. `supabase/migrations/20261110143000_handoff_guard.sql`
 4. `supabase/migrations/20261110170000_fix_accept_handoff.sql`
-5. `supabase/migrations/20261110190000_round3.sql`（店舗あたりの引き継ぎ上限を1時間200件に上げ、相談申込テーブル、標準プランのメニュー書き込み、ロール判定、数式の無害化、電話番号の形式を入れます。画面の「整体院・治療院」という呼び方を、既に入っているデータから「整体院」に置き換えます。`seed.sql` の再実行は不要です）
-6. Authentication でデモユーザーを3人作り、メール確認を完了する（`email_confirmed_at` が必要）
-7. `supabase/seed_members.sql`
-8. `supabase/tests/rls_isolation.sql`（成功してもロールバックされます）
-9. Edge Function `supabase/functions/handoff` を再デプロイし、`supabase/functions/consult` を新規デプロイする。
+5. `supabase/migrations/20261110190000_round3.sql`（相談申込テーブル、標準プランのメニュー書き込み、数式の無害化、電話番号の形式を入れます。画面の「整体院・治療院」という呼び方を、既に入っているデータから「整体院」に置き換えます。`seed.sql` の再実行は不要です）
+6. `supabase/migrations/20261110201000_shop_cap_role.sql`（店舗あたりの引き継ぎ上限を1時間200件に置き換え、`auth.role()` で列の更新を止め、ライトプランの営業時間・アクセス更新を止め、IP回数表の削除を同じ cron に入れます）
+7. Authentication でデモユーザーを3人作り、メール確認を完了する（`email_confirmed_at` が必要）
+8. `supabase/seed_members.sql`
+9. `supabase/tests/rls_isolation.sql`（成功してもロールバックされます）
+10. Edge Function `supabase/functions/handoff` を再デプロイし、`supabase/functions/consult` を新規デプロイする。
 
 `HANDOFF_IP_SALT` が無いときは、注入済みの `SUPABASE_SERVICE_ROLE_KEY` を鍵にした HMAC-SHA256（メッセージ `handoff-ip-salt-v1`）をソルトにします。この値はログにもレスポンスにも出しません。`HANDOFF_ALLOWED_ORIGINS` が無いときの初期値は `https://shop-chatbot-demo-0lf2.onrender.com` だけです。ローカルで試すときは、この secret に `https://shop-chatbot-demo-0lf2.onrender.com,http://localhost:5173,http://127.0.0.1:5173` を入れてください。設定があればそちらが優先されます。Origin の無いリクエストは拒否します。ブラウザの `functions.invoke` は Origin を送るので、その呼び出しは通ります。`consult` も同じ Origin 一覧を使います。
 
@@ -53,7 +54,7 @@ Turnstile の秘密鍵は、Supabase の Function secret `TURNSTILE_SECRET_KEY` 
 
 相談の送信は `public.consult_requests` に残します。自動では消しません。IP の回数だけ、引き継ぎの IP 回数とともに、1日より古い行を毎日 03:15 UTC に消します。引き継ぎの本文は、これまでどおり7日より古い行を消します。相談への自動返信メールは送りません。
 
-`pg_cron` は Supabase の無料枠に含まれます。マイグレーションが「pg_cron を作成できませんでした」と出たら、Dashboard の Database → Extensions で pg_cron を有効にしてから、`20261110190000_round3.sql` 末尾の `cron.schedule` を再実行してください。
+`pg_cron` は Supabase の無料枠に含まれます。マイグレーションが「pg_cron を作成できませんでした」と出たら、Dashboard の Database → Extensions で pg_cron を有効にしてから、`20261110201000_shop_cap_role.sql` 末尾の `cron.schedule` を再実行してください。引き継ぎの本文は7日より古い行を、IPの回数は1日より古い行を消します。毎日1回なので、消えるまでは最大でおよそ8日残ることがあります。
 
 `seed.sql` をやり直すと3店舗が消えて作り直され、FAQ・メニュー・引き継ぎ・紐づけも消えます。そのあとは `seed_members.sql` をもう一度実行します。
 

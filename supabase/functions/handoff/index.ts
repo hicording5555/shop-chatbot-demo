@@ -3,6 +3,7 @@ import {
   PRODUCTION_ORIGIN,
   TURNSTILE_TEST_SECRET,
   contactOk,
+  handoffPublicContacts,
   parseOrigins,
   turnstileRequired,
   verifyTurnstile,
@@ -95,10 +96,9 @@ Deno.serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const shop = await admin.from('shops').select('id, plan, published, phone, email').eq('id', shopId).maybeSingle();
-  const published = shop.data?.published === true;
-  const contacts = published ? { phone: shop.data?.phone ?? '', email: shop.data?.email ?? '' } : {};
-  if (shop.error || !shop.data || !published || shop.data.plan !== 'full') {
-    return json(403, { ok: false, reason: 'unavailable', ...contacts }, origin);
+  const contacts = handoffPublicContacts(shop.data);
+  if (shop.error || !shop.data || shop.data.published !== true || shop.data.plan !== 'full') {
+    return json(403, { ok: false, reason: 'unavailable' }, origin);
   }
 
   const ipHash = await hashIp(clientIp(req), salt);

@@ -48,6 +48,11 @@ export function contactOk(contact: string): boolean {
   return japanesePhoneOk(contact);
 }
 
+export function handoffPublicContacts(shop: { published?: boolean; plan?: string; phone?: string | null; email?: string | null } | null | undefined): { phone: string; email: string } | Record<string, never> {
+  if (!shop || shop.published !== true || shop.plan !== 'full') return {};
+  return { phone: shop.phone ?? '', email: shop.email ?? '' };
+}
+
 export function neutralizeFormula(value: string): string {
   if (!value) return value;
   const first = value[0];
