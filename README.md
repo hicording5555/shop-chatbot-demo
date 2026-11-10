@@ -41,7 +41,7 @@ Supabase の SQL Editor で、次の順にファイル全体を実行します�
 4. Authentication でデモユーザーを3人作り、メール確認を完了する（`email_confirmed_at` が必要）
 5. `supabase/seed_members.sql`
 6. `supabase/tests/rls_isolation.sql`（成功してもロールバックされます）
-7. Edge Function `supabase/functions/handoff` をデプロイし、secret `HANDOFF_IP_SALT` を設定する
+7. Edge Function `supabase/functions/handoff` をデプロイする。追加の secret は不要です。`HANDOFF_IP_SALT` が無いときは、注入済みの `SUPABASE_SERVICE_ROLE_KEY` を鍵にした HMAC-SHA256（メッセージ `handoff-ip-salt-v1`）をソルトにします。この値はログにもレスポンスにも出しません。`HANDOFF_ALLOWED_ORIGINS` が無いときは `https://shop-chatbot-demo-0lf2.onrender.com,http://localhost:5173,http://127.0.0.1:5173` を使います。どちらも環境変数があればそちらが優先されます。
 
 `pg_cron` は Supabase の無料枠に含まれます。マイグレーションが「pg_cron を作成できませんでした」と出たら、Dashboard の Database → Extensions で pg_cron を有効にしてから、同じファイル末尾の `cron.schedule` を再実行してください。有効なら、7日より古い `handoff_requests` を毎日 03:15 UTC に削除します。
 
@@ -121,7 +121,7 @@ npm run preview
 ## データの守られ方
 
 - `anon` は公開中の店舗・メニュー・公開FAQを読むだけです
-- `anon` は引き継ぎを insert できません。送信は Edge Function `handoff` だけが行い、サービスロールで `public.accept_handoff` を呼びます。IP はソルト付きハッシュで、1時間に5件までです。店舗ごとには1時間30件の上限もあります。プランが `full` の店だけ受け付けます
+- `anon` は引き継ぎを insert できません。送信は Edge Function `handoff` だけが行い、サービスロールで `public.accept_handoff` を呼びます。IP はソルト付きハッシュで、1時間に5件までです。ソルト用の secret は無くてもデプロイできます。店舗ごとには1時間30件の上限もあります。プランが `full` の店だけ受け付けます
 - ログインユーザーは `shop_members` で紐づいた店の行だけです。参照は `private.current_shop_ids()`（security definer、`search_path` 空）です
 - ヘルパー関数は `private` にあります。Data API の Exposed schemas に `private` を追加しないでください
 - 認可に `user_metadata` は使っていません

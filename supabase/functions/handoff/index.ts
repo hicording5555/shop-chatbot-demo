@@ -1,15 +1,25 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
 
-const DEFAULT_ORIGINS = [
-  'https://shop-chatbot-demo-0lf2.onrender.com',
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-];
+const DEFAULT_ORIGINS = 'https://shop-chatbot-demo-0lf2.onrender.com,http://localhost:5173,http://127.0.0.1:5173';
 
 function allowedOrigins(): string[] {
-  const configured = Deno.env.get('HANDOFF_ALLOWED_ORIGINS');
-  if (!configured) return DEFAULT_ORIGINS;
-  return configured.split(',').map((item) => item.trim()).filter(Boolean);
+  const configured = Deno.env.get('HANDOFF_ALLOWED_ORIGINS')?.trim();
+  const list = configured ? configured : DEFAULT_ORIGINS;
+  return list.split(',').map((item) => item.trim()).filter(Boolean);
+}
+
+async function ipSalt(serviceKey: string): Promise<string> {
+  const configured = Deno.env.get('HANDOFF_IP_SALT')?.trim();
+  if (configured) return configured;
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(serviceKey),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode('handoff-ip-salt-v1'));
+  return [...new Uint8Array(signature)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 function corsHeaders(origin: string): HeadersInit {
@@ -49,10 +59,10 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json(405, { ok: false, reason: 'invalid' }, origin);
   if (origin && !allowedOrigins().includes(origin)) return json(403, { ok: false, reason: 'invalid' }, origin);
 
-  const salt = Deno.env.get('HANDOFF_IP_SALT');
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (!salt || !supabaseUrl || !serviceKey) return json(500, { ok: false, reason: 'invalid' }, origin);
+  if (!supabaseUrl || !serviceKey) return json(500, { ok: false, reason: 'invalid' }, origin);
+  const salt = await ipSalt(serviceKey);
 
   let payload: { shop_id?: string; customer_name?: string; contact?: string; question?: string };
   try {
