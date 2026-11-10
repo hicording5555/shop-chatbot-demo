@@ -2,10 +2,12 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
 import {
   OPERATOR_CONTACT_PLACEHOLDER,
   PRODUCTION_ORIGIN,
+  capKindFromMessage,
   contactOk,
   japanesePhoneOk,
   neutralizeFormula,
   parseOrigins,
+  recordCapHit,
   turnstileRequired,
   verifyTurnstile,
 } from '../_shared/policy.ts';
@@ -146,14 +148,8 @@ Deno.serve(async (req) => {
   });
   if (inserted.error) {
     const message = inserted.error.message ?? '';
-    const capKind = /rate_limited_global/i.test(message)
-      ? 'consult_global'
-      : /rate_limited_ip/i.test(message)
-        ? 'consult_ip'
-        : /rate_limited/i.test(message)
-          ? 'consult_global'
-          : '';
-    if (capKind) await admin.schema('private').from('cap_hits').insert({ kind: capKind });
+    const capKind = capKindFromMessage(message, 'consult');
+    if (capKind) await recordCapHit(admin, capKind);
     const reason = capKind
       ? 'rate_limited'
       : /contact_invalid/i.test(message)

@@ -676,6 +676,50 @@ select public._rls_expect(
 );
 
 reset role;
+set local role anon;
+select set_config('request.jwt.claims', '{"role":"anon"}', true);
+select set_config('request.jwt.claim.role', 'anon', true);
+do $$
+begin
+  perform public.record_cap_hit('consult_ip');
+  raise exception 'RLS TEST FAILED: anon executed record_cap_hit';
+exception
+  when insufficient_privilege then
+    null;
+end $$;
+
+set local role authenticated;
+select public._rls_as(current_setting('test.food_user'));
+do $$
+begin
+  perform public.record_cap_hit('consult_global');
+  raise exception 'RLS TEST FAILED: shop user executed record_cap_hit';
+exception
+  when insufficient_privilege then
+    null;
+end $$;
+
+reset role;
+set local role service_role;
+select public.record_cap_hit('handoff_shop');
+do $$
+begin
+  perform public.record_cap_hit('nope');
+  raise exception 'RLS TEST FAILED: invalid cap kind was stored';
+exception
+  when invalid_text_representation then
+    if sqlerrm not like '%invalid cap kind%' then
+      raise exception 'RLS TEST FAILED: expected invalid cap kind, got %', sqlerrm;
+    end if;
+end $$;
+
+reset role;
+select public._rls_expect(
+  (select count(*) from private.cap_hits where kind = 'handoff_shop') = 1,
+  'service_role cap hit was not stored'
+);
+
+reset role;
 do $$
 begin
   raise notice 'RLS isolation tests passed';

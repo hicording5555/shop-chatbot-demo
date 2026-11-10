@@ -42,10 +42,11 @@ Supabase の SQL Editor で、次の順にファイル全体を実行します�
 5. `supabase/migrations/20261110190000_round3.sql`（相談申込テーブル、標準プランのメニュー書き込み、数式の無害化、電話番号の形式を入れます。画面の「整体院・治療院」という呼び方を、既に入っているデータから「整体院」に置き換えます。`seed.sql` の再実行は不要です）
 6. `supabase/migrations/20261110201000_shop_cap_role.sql`（店舗あたりの引き継ぎ上限を1時間200件に置き換え、`auth.role()` で列の更新を止め、ライトプランの営業時間・アクセス更新を止め、IP回数表の削除を同じ cron に入れます）
 7. `supabase/migrations/20261110230000_round4.sql`（相談URLを任意に、長さの制約、上限に達した記録、相談の90日削除、ライトプランの予約ページと補足情報の更新禁止）
-8. Authentication でデモユーザーを3人作り、メール確認を完了する（`email_confirmed_at` が必要）
-9. `supabase/seed_members.sql`
-10. `supabase/tests/rls_isolation.sql`（成功してもロールバックされます）
-11. Edge Function `handoff` と `consult` を再デプロイする。
+8. `supabase/migrations/20261110240000_cap_hit_rpc.sql`（上限の記録を `public.record_cap_hit` 経由にし、90日より古い記録も同じ cron で消します）
+9. Authentication でデモユーザーを3人作り、メール確認を完了する（`email_confirmed_at` が必要）
+10. `supabase/seed_members.sql`
+11. `supabase/tests/rls_isolation.sql`（成功してもロールバックされます）
+12. Edge Function `handoff` と `consult` を再デプロイする。
 
 `HANDOFF_IP_SALT` が無いときは、注入済みの `SUPABASE_SERVICE_ROLE_KEY` を鍵にした HMAC-SHA256（メッセージ `handoff-ip-salt-v1`）をソルトにします。この値はログにもレスポンスにも出しません。`HANDOFF_ALLOWED_ORIGINS` が無いときの初期値は `https://shop-chatbot-demo-0lf2.onrender.com` だけです。ローカルで試すときは、この secret に `https://shop-chatbot-demo-0lf2.onrender.com,http://localhost:5173,http://127.0.0.1:5173` を入れてください。設定があればそちらが優先されます。Origin の無いリクエストは拒否します。ブラウザの `functions.invoke` は Origin を送るので、その呼び出しは通ります。`consult` も同じ Origin 一覧を使います。
 
@@ -59,7 +60,7 @@ Turnstile のサイトキーは公開鍵です。本番の初期値は `0x4AAAAA
 
 電話番号の規則は次のとおりです。相談フォームの電話は空欄でも送れます。引き継ぎの連絡先は、メールアドレスか電話番号です。電話に使える文字は数字、空白、ハイフン、半角または全角のかっこです。数字以外を除いたあと、0から始まる10桁か11桁だけを受け付けます。`0000000000` のように全部が同じ数字の番号は拒否します。`+81` のような先頭のプラスは受け付けません。メールは、空白のない1つのアドレスで、`@` が1つ、ドメインにドットが1つ以上あるものです。
 
-相談は1時間に全体で100件、同じIPから5件までです。引き継ぎは1店舗あたり1時間200件、同じIPから5件までです。上限に達すると Edge Function が `private.cap_hits` に時刻と種類（`consult_global`、`consult_ip`、`handoff_shop`、`handoff_ip`）を1行残します。SQL Editor で次を実行して確認します。
+相談は1時間に全体で100件、同じIPから5件までです。引き継ぎは1店舗あたり1時間200件、同じIPから5件までです。上限に達すると Edge Function が `public.record_cap_hit` を呼び、`private.cap_hits` に時刻と種類（`consult_global`、`consult_ip`、`handoff_shop`、`handoff_ip`）を1行残します。90日より古い行は、毎日 03:15 UTC の同じジョブで消します。SQL Editor で次を実行して確認します。
 
 ```sql
 select kind, created_at from private.cap_hits order by created_at desc limit 100;

@@ -3,8 +3,10 @@ import {
   TURNSTILE_TEST_SECRET,
   contactOk,
   japanesePhoneOk,
+  capKindFromMessage,
   handoffPublicContacts,
   neutralizeFormula,
+  recordCapHit,
   parseOrigins,
   turnstileRequired,
   verifyTurnstile,
@@ -135,6 +137,32 @@ describe('turnstile', () => {
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
     expect(result).toBe('captcha_failed');
+  });
+});
+
+describe('cap hits', () => {
+  it('maps each limit message to the rpc kind', () => {
+    expect(capKindFromMessage('rate_limited_shop', 'handoff')).toBe('handoff_shop');
+    expect(capKindFromMessage('rate_limited_ip', 'handoff')).toBe('handoff_ip');
+    expect(capKindFromMessage('rate limited', 'handoff')).toBe('handoff_shop');
+    expect(capKindFromMessage('rate_limited_global', 'consult')).toBe('consult_global');
+    expect(capKindFromMessage('rate_limited_ip', 'consult')).toBe('consult_ip');
+    expect(capKindFromMessage('contact_invalid', 'consult')).toBe('');
+  });
+
+  it('records a hit through record_cap_hit and logs only the kind', async () => {
+    const rpc = vi.fn(async () => ({ error: null }));
+    const lines: string[] = [];
+    await recordCapHit({ rpc }, 'consult_ip', (line) => lines.push(line));
+    expect(rpc).toHaveBeenCalledWith('record_cap_hit', { p_kind: 'consult_ip' });
+    expect(lines).toEqual([]);
+
+    const failing = vi.fn(async () => ({ error: { message: 'database said too much about 山田 a@example.com' } }));
+    await recordCapHit({ rpc: failing }, 'handoff_shop', (line) => lines.push(line));
+    expect(failing).toHaveBeenCalledWith('record_cap_hit', { p_kind: 'handoff_shop' });
+    expect(lines).toEqual(['record_cap_hit failed kind=handoff_shop']);
+    expect(lines[0]).not.toContain('山田');
+    expect(lines[0]).not.toContain('a@example.com');
   });
 });
 

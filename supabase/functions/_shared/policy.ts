@@ -80,6 +80,34 @@ export function handoffPublicContacts(shop: { published?: boolean; plan?: string
   return { phone: shop.phone ?? '', email: shop.email ?? '' };
 }
 
+export type CapKind = 'consult_global' | 'consult_ip' | 'handoff_shop' | 'handoff_ip';
+
+export function capKindFromMessage(message: string, scope: 'consult' | 'handoff'): CapKind | '' {
+  if (scope === 'consult') {
+    if (/rate_limited_global/i.test(message)) return 'consult_global';
+    if (/rate_limited_ip/i.test(message)) return 'consult_ip';
+    if (/rate[_ ]limited/i.test(message)) return 'consult_global';
+    return '';
+  }
+  if (/rate_limited_shop/i.test(message)) return 'handoff_shop';
+  if (/rate_limited_ip/i.test(message)) return 'handoff_ip';
+  if (/rate[_ ]limited/i.test(message)) return 'handoff_shop';
+  return '';
+}
+
+export async function recordCapHit(
+  admin: { rpc: (name: string, args: { p_kind: string }) => Promise<{ error: { message?: string } | null }> },
+  kind: CapKind,
+  log: (line: string) => void = (line) => console.error(line),
+): Promise<void> {
+  try {
+    const recorded = await admin.rpc('record_cap_hit', { p_kind: kind });
+    if (recorded.error) log(`record_cap_hit failed kind=${kind}`);
+  } catch {
+    log(`record_cap_hit failed kind=${kind}`);
+  }
+}
+
 export function neutralizeFormula(value: string): string {
   if (!value) return value;
   const first = value[0];
