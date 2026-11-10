@@ -272,6 +272,8 @@ exception
 end $$;
 
 reset role;
+select set_config('request.jwt.claim.role', '', true);
+select set_config('request.jwt.claims', '', true);
 update public.shops set plan = 'light' where slug = 'komorebi';
 set local role authenticated;
 select public._rls_as(current_setting('test.food_user'));
@@ -301,8 +303,19 @@ exception
   when insufficient_privilege then
     null;
 end $$;
+do $$
+begin
+  insert into public.menu_items (shop_id, category, name, price_text)
+  values ('11111111-1111-4111-8111-111111111111', 'cafe', 'ライトでは書けない', '100円');
+  raise exception 'RLS TEST FAILED: light plan menu write was allowed';
+exception
+  when insufficient_privilege then
+    null;
+end $$;
 
 reset role;
+select set_config('request.jwt.claim.role', '', true);
+select set_config('request.jwt.claims', '', true);
 update public.shops set plan = 'full' where slug = 'komorebi';
 set local role service_role;
 do $$
@@ -371,6 +384,8 @@ select public._rls_expect(
 );
 
 reset role;
+select set_config('request.jwt.claim.role', '', true);
+select set_config('request.jwt.claims', '', true);
 update public.shops set published = false where slug = 'lumiere';
 
 set local role anon;
@@ -381,6 +396,120 @@ select public._rls_expect(
   (select count(*) from public.faqs where shop_id = '22222222-2222-4222-8222-222222222222') = 0,
   'anon should hide faqs of an unpublished shop'
 );
+
+reset role;
+select set_config('request.jwt.claim.role', '', true);
+select set_config('request.jwt.claims', '', true);
+grant update (industry, slug, published, plan) on table public.shops to authenticated;
+set local role authenticated;
+select public._rls_as(current_setting('test.food_user'));
+do $$
+begin
+  update public.shops set industry = 'salon' where id = '11111111-1111-4111-8111-111111111111';
+  raise exception 'RLS TEST FAILED: industry change passed the role check';
+exception
+  when insufficient_privilege then
+    if sqlerrm not like '%immutable shop column%' then
+      raise exception 'RLS TEST FAILED: expected immutable shop column, got %', sqlerrm;
+    end if;
+end $$;
+
+reset role;
+select set_config('request.jwt.claim.role', '', true);
+select set_config('request.jwt.claims', '', true);
+set local role service_role;
+do $$
+declare
+  created_id uuid;
+begin
+  created_id := public.accept_handoff(
+    '33333333-3333-4333-8333-333333333333',
+    '=SUM(1)',
+    '090-2222-3333',
+    'formula',
+    repeat('12', 16)
+  );
+  if created_id is null then
+    raise exception 'RLS TEST FAILED: formula handoff returned null';
+  end if;
+end $$;
+do $$
+begin
+  perform public.accept_handoff(
+    '33333333-3333-4333-8333-333333333333',
+    'ゼロ',
+    '0000000000',
+    'all same digits',
+    repeat('13', 16)
+  );
+  raise exception 'RLS TEST FAILED: all-same phone was accepted';
+exception
+  when check_violation then
+    if sqlerrm not like '%contact_invalid%' then
+      raise exception 'RLS TEST FAILED: expected contact_invalid, got %', sqlerrm;
+    end if;
+end $$;
+select public.accept_consult(
+  '=cmd',
+  '飲食店',
+  '',
+  '担当',
+  'owner@example.com',
+  '',
+  'https://example.com/shop',
+  'まだ決めていない',
+  'まず話を聞きたい',
+  '',
+  '',
+  false,
+  '',
+  false,
+  repeat('14', 16)
+);
+
+reset role;
+select set_config('request.jwt.claim.role', '', true);
+select set_config('request.jwt.claims', '', true);
+select public._rls_expect(
+  (select customer_name from public.handoff_requests where question = 'formula') = '''=SUM(1)',
+  'formula prefix missing on handoff'
+);
+select public._rls_expect(
+  (select shop_name from public.consult_requests) = '''=cmd',
+  'formula prefix missing on consult'
+);
+
+set local role anon;
+select set_config('request.jwt.claims', '{"role":"anon"}', true);
+select set_config('request.jwt.claim.role', 'anon', true);
+do $$
+begin
+  perform 1 from public.consult_requests;
+  raise exception 'RLS TEST FAILED: anon read consult_requests';
+exception
+  when insufficient_privilege then
+    null;
+end $$;
+do $$
+begin
+  insert into public.consult_requests (shop_name, industry, contact_name, email, site_url, plan_choice, application_kind)
+  values ('店', '飲食店', '担当', 'a@example.com', 'https://example.com/shop', 'ライト', 'まず話を聞きたい');
+  raise exception 'RLS TEST FAILED: anon inserted consult_requests';
+exception
+  when insufficient_privilege then
+    null;
+end $$;
+
+set local role authenticated;
+select public._rls_as(current_setting('test.food_user'));
+do $$
+begin
+  perform 1 from public.consult_requests;
+  raise exception 'RLS TEST FAILED: shop user read consult_requests';
+exception
+  when insufficient_privilege then
+    null;
+end $$;
 
 reset role;
 do $$

@@ -1,3 +1,4 @@
+import { contactOk, neutralizeFormula } from '../../supabase/functions/_shared/policy';
 import type { HandoffInput } from '../types';
 
 export interface HandoffDraft {
@@ -18,25 +19,23 @@ export function isEmail(contact: string): boolean {
 }
 
 export function isPhone(contact: string): boolean {
-  if (!/^[0-9+()（）\s-]+$/.test(contact)) return false;
-  const digits = contact.replace(/[^0-9]/g, '');
-  return digits.length >= 10 && digits.length <= 15;
+  return contactOk(contact) && !contact.includes('@');
 }
 
 export function validateHandoff(
   shopId: string,
   draft: HandoffDraft,
 ): { ok: true; value: HandoffInput } | { ok: false; message: string } {
-  const customerName = draft.name.trim().normalize('NFKC');
+  const customerName = neutralizeFormula(draft.name.trim());
   const contact = normalizeContact(draft.contact);
-  const question = draft.question.trim().normalize('NFKC');
+  const question = neutralizeFormula(draft.question.trim());
   if (customerName.length < 1 || customerName.length > 80) {
     return { ok: false, message: 'お名前は1〜80文字で入力してください。' };
   }
-  if (!isEmail(contact) && !isPhone(contact)) {
+  if (!contactOk(contact)) {
     return {
       ok: false,
-      message: '連絡先はメールアドレスか、数字が10〜15桁の電話番号で入力してください。',
+      message: '連絡先はメールアドレスか、0から始まる10〜11桁の電話番号で入力してください。',
     };
   }
   if (question.length < 1 || question.length > 1000) {

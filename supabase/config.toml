@@ -1,3 +1,6 @@
 # Edge Function の JWT 検証はオン（anon キーでの呼び出しは通る。service_role は関数の中だけで使う）。
 [functions.handoff]
 verify_jwt = true
+
+[functions.consult]
+verify_jwt = true

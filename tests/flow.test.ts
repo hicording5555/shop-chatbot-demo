@@ -18,7 +18,7 @@ describe('plan flows', () => {
     for (const plan of ['light', 'standard', 'full'] as PlanId[]) {
       const opened = start(plan);
       expect(opened.state.industry).toBeNull();
-      expect(opened.bot.buttons.map((button) => button.label)).toEqual(['飲食店・カフェ', '美容室・サロン', '整体院・治療院']);
+      expect(opened.bot.buttons.map((button) => button.label)).toEqual(['飲食店・カフェ', '美容室・サロン', '整体院']);
     }
   });
 

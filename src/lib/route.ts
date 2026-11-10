@@ -6,6 +6,7 @@ export type Route =
   | { name: 'widget'; plan: PlanId }
   | { name: 'admin' }
   | { name: 'consult' }
+  | { name: 'privacy' }
   | { name: 'reserve'; slug: string }
   | { name: 'notfound' };
 
@@ -16,6 +17,7 @@ export function parseRoute(pathname: string): Route {
   if (path === '/') return { name: 'landing' };
   if (path === '/admin') return { name: 'admin' };
   if (path === '/consult') return { name: 'consult' };
+  if (path === '/privacy') return { name: 'privacy' };
   const reserve = /^\/reserve\/([a-z0-9-]+)$/.exec(path);
   if (reserve) return { name: 'reserve', slug: reserve[1] };
   const demo = /^\/demo\/(light|standard|full)$/.exec(path);

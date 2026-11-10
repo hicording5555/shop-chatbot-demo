@@ -70,7 +70,7 @@ export interface HandoffInput {
 export const INDUSTRY_LABEL: Record<Industry, string> = {
   food: '飲食店・カフェ',
   salon: '美容室・サロン',
-  seitai: '整体院・治療院',
+  seitai: '整体院',
 };
 
 export const PLAN_LABEL: Record<PlanId, string> = {

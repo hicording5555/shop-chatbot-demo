@@ -123,7 +123,7 @@ export interface HandoffRow {
 export async function insertHandoff(
   supabaseUrl: string,
   anonKey: string,
-  input: { shopId: string; customerName: string; contact: string; question: string },
+  input: { shopId: string; customerName: string; contact: string; question: string; turnstileToken?: string },
 ): Promise<void> {
   const client = createPublicClient(supabaseUrl, anonKey);
   const { data, error } = await client.functions.invoke('handoff', {
@@ -132,6 +132,7 @@ export async function insertHandoff(
       customer_name: input.customerName,
       contact: input.contact,
       question: input.question,
+      turnstile_token: input.turnstileToken ?? '',
     },
   });
   if (error) {

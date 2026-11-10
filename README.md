@@ -23,7 +23,7 @@
 
 ## プランの違い
 
-どのデモも最初に業種（飲食店・カフェ／美容室・サロン／整体院・治療院）を選びます。
+どのデモも最初に業種（飲食店・カフェ／美容室・サロン／整体院）を選びます。
 
 - ライト: FAQボタンと自由入力。自由入力は正規化・同義語・表記ゆれでFAQを探します。無ければ「お店に直接お問い合わせください」と連絡先
 - 標準: ライトに加えて、メニュー・予約・営業時間・アクセスのボタン。予約はボットでは確定せず、お店の予約ページ（デモでは example.com）へ誘導。管理画面で自店のFAQだけ追加・編集・削除
@@ -39,12 +39,21 @@ Supabase の SQL Editor で、次の順にファイル全体を実行します�
 2. `supabase/seed.sql`
 3. `supabase/migrations/20261110143000_handoff_guard.sql`
 4. `supabase/migrations/20261110170000_fix_accept_handoff.sql`
-5. Authentication でデモユーザーを3人作り、メール確認を完了する（`email_confirmed_at` が必要）
-6. `supabase/seed_members.sql`
-7. `supabase/tests/rls_isolation.sql`（成功してもロールバックされます）
-8. Edge Function `supabase/functions/handoff` をデプロイする。追加の secret は不要です。`HANDOFF_IP_SALT` が無いときは、注入済みの `SUPABASE_SERVICE_ROLE_KEY` を鍵にした HMAC-SHA256（メッセージ `handoff-ip-salt-v1`）をソルトにします。この値はログにもレスポンスにも出しません。`HANDOFF_ALLOWED_ORIGINS` が無いときは `https://shop-chatbot-demo-0lf2.onrender.com,http://localhost:5173,http://127.0.0.1:5173` を使います。どちらも環境変数があればそちらが優先されます。Origin の無いリクエストは拒否します。ブラウザの `functions.invoke` は Origin を送るので、その呼び出しは通ります。
+5. `supabase/migrations/20261110190000_round3.sql`（店舗あたりの引き継ぎ上限を1時間200件に上げ、相談申込テーブル、標準プランのメニュー書き込み、ロール判定、数式の無害化、電話番号の形式を入れます。画面の「整体院・治療院」という呼び方を、既に入っているデータから「整体院」に置き換えます。`seed.sql` の再実行は不要です）
+6. Authentication でデモユーザーを3人作り、メール確認を完了する（`email_confirmed_at` が必要）
+7. `supabase/seed_members.sql`
+8. `supabase/tests/rls_isolation.sql`（成功してもロールバックされます）
+9. Edge Function `supabase/functions/handoff` を再デプロイし、`supabase/functions/consult` を新規デプロイする。
 
-`pg_cron` は Supabase の無料枠に含まれます。マイグレーションが「pg_cron を作成できませんでした」と出たら、Dashboard の Database → Extensions で pg_cron を有効にしてから、同じファイル末尾の `cron.schedule` を再実行してください。有効なら、7日より古い `handoff_requests` を毎日 03:15 UTC に削除します。
+`HANDOFF_IP_SALT` が無いときは、注入済みの `SUPABASE_SERVICE_ROLE_KEY` を鍵にした HMAC-SHA256（メッセージ `handoff-ip-salt-v1`）をソルトにします。この値はログにもレスポンスにも出しません。`HANDOFF_ALLOWED_ORIGINS` が無いときの初期値は `https://shop-chatbot-demo-0lf2.onrender.com` だけです。ローカルで試すときは、この secret に `https://shop-chatbot-demo-0lf2.onrender.com,http://localhost:5173,http://127.0.0.1:5173` を入れてください。設定があればそちらが優先されます。Origin の無いリクエストは拒否します。ブラウザの `functions.invoke` は Origin を送るので、その呼び出しは通ります。`consult` も同じ Origin 一覧を使います。
+
+Turnstile のサイトキーは、フロントの環境変数 `VITE_TURNSTILE_SITE_KEY` です。本番では Render の環境変数（`render.yaml` の同名キー、`sync: false`）に、Cloudflare で発行したサイトキーを入れます。未設定のあいだは、Cloudflare の常時合格テストキー `1x00000000000000000000AA` を使います。
+
+Turnstile の秘密鍵は、Supabase の Function secret `TURNSTILE_SECRET_KEY` です。未設定のあいだはテスト秘密鍵 `1x0000000000000000000000000000000AA` を使います。検証を必須にする Function secret は `TURNSTILE_REQUIRED` で、初期値はオフ（未設定、または `0` / `false` / `off`）です。オフのあいだはトークンが無くても拒否しません。テストキーは誰でも通るためです。`1` / `true` / `on` / `yes` のときは、Cloudflare の siteverify（`remoteip` 付き）で確認し、無いトークンや無効なトークンは `403` の `captcha_failed` にします。本番の鍵に切り替えるときは、サイトキーと秘密鍵を一緒に入れ、そのあと `TURNSTILE_REQUIRED` を `on` にして両方の関数を再デプロイしてください。
+
+相談の送信は `public.consult_requests` に残します。自動では消しません。IP の回数だけ、引き継ぎの IP 回数とともに、1日より古い行を毎日 03:15 UTC に消します。引き継ぎの本文は、これまでどおり7日より古い行を消します。相談への自動返信メールは送りません。
+
+`pg_cron` は Supabase の無料枠に含まれます。マイグレーションが「pg_cron を作成できませんでした」と出たら、Dashboard の Database → Extensions で pg_cron を有効にしてから、`20261110190000_round3.sql` 末尾の `cron.schedule` を再実行してください。
 
 `seed.sql` をやり直すと3店舗が消えて作り直され、FAQ・メニュー・引き継ぎ・紐づけも消えます。そのあとは `seed_members.sql` をもう一度実行します。
 

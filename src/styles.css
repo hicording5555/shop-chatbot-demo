@@ -7,6 +7,7 @@
   --paper: #f4ecdf;
   --card: #fffaf3;
   --line: #b9a58f;
+  --input-line: #8a735c;
   --green: #1d4a3a;
   --green-2: #2f6b52;
   --persimmon: #a8431f;
@@ -75,7 +76,7 @@ h1, h2, h3 { line-height: 1.3; font-weight: 700; }
 
 .plan-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
   margin: 28px 0;
 }
@@ -137,7 +138,7 @@ h1, h2, h3 { line-height: 1.3; font-weight: 700; }
   display: flex;
   flex-direction: column;
   min-height: 640px;
-  max-height: calc(100vh - 96px);
+  max-height: calc(100vh - 112px);
   position: sticky;
   top: 16px;
   overflow: hidden;
@@ -163,18 +164,22 @@ h1, h2, h3 { line-height: 1.3; font-weight: 700; }
 
 .composer, .handoff, .stack { display: flex; flex-direction: column; gap: 8px; }
 .composer { flex-direction: row; padding: 12px; border-top: 1px solid var(--line); }
-.stack input[type='checkbox'], .check input { width: auto; flex: 0 0 auto; margin: 0; }
 .composer-input, .field input, .field textarea, .stack input, .stack textarea {
   width: 100%;
   font: inherit;
   color: inherit;
-  border: 1px solid var(--line);
+  border: 1px solid var(--input-line);
   border-radius: 12px;
   padding: 10px 12px;
   background: #fff;
 }
 .field textarea, .stack textarea { min-height: 90px; resize: vertical; }
 .composer-input { flex: 1; }
+.stack input[type='checkbox'], .stack input[type='radio'], .check input { width: auto; flex: 0 0 auto; margin: 0; }
+.check { display: flex; gap: 8px; align-items: flex-start; }
+.consult-form fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.consult-form legend { font-weight: 700; padding: 0; }
+button:disabled { opacity: 0.45; cursor: default; }
 
 .handoff { margin-top: 8px; }
 
@@ -198,7 +203,12 @@ pre {
 .handoff-card { border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; background: var(--card); }
 .cta-row, .row { display: flex; flex-wrap: wrap; gap: 10px; }
 .audience { color: var(--green); font-weight: 700; margin: 0; }
-.plan-card li, .audience { word-break: keep-all; line-break: strict; }
+.plan-card li, .audience { word-break: normal; overflow-wrap: anywhere; }
+.storefront.food { border-top: 8px solid #c6532a; }
+.storefront.salon { border-top: 8px solid #6d5a7a; }
+.storefront.seitai { border-top: 8px solid #1d4a3a; }
+.old-choices { margin-top: 8px; }
+.consult-form .check { align-items: flex-start; }
 .admin-sample { margin-top: 16px; }
 
 .widget-frame, body.widget #app { height: 100%; }

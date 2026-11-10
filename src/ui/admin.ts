@@ -3,6 +3,7 @@ import { containsEfficacyClaim, type Shop } from '../types';
 import { mapFaq, mapShop, type HandoffRow } from '../data/api';
 import { splitKeywords } from '../lib/keywords';
 import { el } from './dom';
+import { neutralizeFormula } from '../../supabase/functions/_shared/policy';
 
 interface FaqDraft {
   id?: string;
@@ -117,7 +118,7 @@ function adminView(
   const list = el('div', { class: 'faq-admin' });
   const redraw = () => {
     list.replaceChildren();
-    for (const faq of faqs) list.append(faqCard(faq, shop, status, client, root));
+    faqs.forEach((faq, index) => list.append(faqCard(faq, shop, status, client, root, faqs, index)));
   };
   redraw();
   return el('main', { class: 'sheet' }, [
@@ -155,11 +156,9 @@ function editorForm(
   const actions = el('div', { class: 'row' }, [
     el('button', { class: 'button', type: 'submit' }, [current?.id ? '更新する' : '追加する']),
   ]);
-  if (current?.id) {
-    const cancel = el('button', { class: 'button ghost', type: 'button' }, ['キャンセル']) as HTMLButtonElement;
-    cancel.addEventListener('click', () => form.remove());
-    actions.append(cancel);
-  }
+  const cancel = el('button', { class: 'button ghost', type: 'button' }, ['キャンセル']) as HTMLButtonElement;
+  cancel.addEventListener('click', () => form.remove());
+  actions.append(cancel);
   const form = el('form', { class: 'stack editor' }, [
     el('h2', null, [current?.id ? '質問を編集' : '質問を追加']),
     el('label', { class: 'field' }, ['質問', question]),
@@ -178,9 +177,9 @@ function editorForm(
       return;
     }
     const payload = {
-      question: question.value.trim(),
-      answer: answer.value.trim(),
-      keywords: splitKeywords(keywords.value),
+      question: neutralizeFormula(question.value.trim()),
+      answer: neutralizeFormula(answer.value.trim()),
+      keywords: splitKeywords(keywords.value).map((keyword) => neutralizeFormula(keyword)),
       published: published.checked,
       sort_order: current?.sortOrder ?? 0,
     };
@@ -207,15 +206,21 @@ function faqCard(
   status: HTMLElement,
   client: SupabaseClient,
   root: HTMLElement,
+  faqs: ReturnType<typeof mapFaq>[],
+  index: number,
 ): HTMLElement {
   const body = el('div', { class: 'stack' });
+  const up = button('上へ', () => swapFaq(client, root, faq, faqs[index - 1]));
+  const down = button('下へ', () => swapFaq(client, root, faq, faqs[index + 1]));
+  up.disabled = index === 0;
+  down.disabled = index === faqs.length - 1;
   const card = el('article', { class: 'faq-card' }, [
-    el('h3', null, [faq.question]),
-    el('p', null, [faq.answer]),
+    el('h3', null, [neutralizeFormula(faq.question)]),
+    el('p', null, [neutralizeFormula(faq.answer)]),
     el('p', { class: 'hint' }, [faq.published ? 'チャットに表示中' : '非公開（チャットに出ません）']),
     el('div', { class: 'row' }, [
-      button('上へ', () => moveFaq(client, root, faq.id, Math.max(0, faq.sortOrder - 1))),
-      button('下へ', () => moveFaq(client, root, faq.id, faq.sortOrder + 1)),
+      up,
+      down,
       button('編集', () => {
         body.replaceChildren(
           editorForm(
@@ -264,8 +269,24 @@ function addSlot(shop: Shop, status: HTMLElement, client: SupabaseClient, root: 
   return el('div', { class: 'stack' }, [open, slot]);
 }
 
-function moveFaq(client: SupabaseClient, root: HTMLElement, id: string, sortOrder: number): void {
-  client.from('faqs').update({ sort_order: sortOrder }).eq('id', id).then(() => mountAdmin(root, client));
+function swapFaq(
+  client: SupabaseClient,
+  root: HTMLElement,
+  current: ReturnType<typeof mapFaq>,
+  neighbor: ReturnType<typeof mapFaq> | undefined,
+): void {
+  if (!neighbor) return;
+  const currentOrder = current.sortOrder;
+  const neighborOrder = neighbor.sortOrder;
+  const nextCurrent = currentOrder === neighborOrder ? neighborOrder + 1 : neighborOrder;
+  client
+    .from('faqs')
+    .update({ sort_order: nextCurrent })
+    .eq('id', current.id)
+    .then(({ error }) => {
+      if (error) return;
+      client.from('faqs').update({ sort_order: currentOrder }).eq('id', neighbor.id).then(() => mountAdmin(root, client));
+    });
 }
 
 function handoffCards(rows: HandoffRow[], client: SupabaseClient, root: HTMLElement): HTMLElement {
@@ -283,8 +304,8 @@ function handoffCards(rows: HandoffRow[], client: SupabaseClient, root: HTMLElem
     list.append(
       el('article', { class: 'handoff-card' }, [
         el('p', { class: 'hint' }, [new Date(row.created_at).toLocaleString('ja-JP')]),
-        el('p', null, [`${row.customer_name}　${row.contact}`]),
-        el('p', null, [row.question]),
+        el('p', null, [`${neutralizeFormula(row.customer_name)}　${neutralizeFormula(row.contact)}`]),
+        el('p', null, [neutralizeFormula(row.question)]),
         remove,
       ]),
     );

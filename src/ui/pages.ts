@@ -4,6 +4,7 @@ import { loadPublicCatalog } from '../data/api';
 import { createPublicClient } from '../lib/supabase';
 import { el } from './dom';
 import { chatSkeleton, mountChat } from './chat';
+import { consultForm } from './consult-form';
 
 const PLANS: { id: PlanId; price: string; monthly: string; audience: string; points: string[] }[] = [
   {
@@ -24,7 +25,7 @@ const PLANS: { id: PlanId; price: string; monthly: string; audience: string; poi
     id: 'full',
     price: '初期 80,000円',
     monthly: '月額 18,000円',
-    audience: '答えられない質問もスタッフに確実につなぎたいお店に',
+    audience: '答えられない質問も、スタッフへつなぎたいお店に',
     points: ['標準の内容すべて', '答えられない質問をスタッフへ引き継ぎ', '届いたお問い合わせを管理画面で一覧表示'],
   },
 ];
@@ -82,14 +83,27 @@ export function landingView(): HTMLElement {
   ]);
 }
 
-export function consultView(): HTMLElement {
+export function consultView(supabaseUrl: string, anonKey: string): HTMLElement {
   return el('main', { class: 'sheet narrow' }, [
     siteHeader('/consult'),
     el('p', { class: 'eyebrow' }, ['相談・申し込み']),
-    el('h1', null, ['導入について相談する']),
-    el('p', null, ['申し込みフォームは、次の段階で用意します。いまはデモで、飲食店・美容室・整体院の案内を試してください。']),
-    el('p', null, ['お使いのホームページに、コードを1行貼るだけで設置できます。']),
-    el('a', { class: 'button', href: '/demo/standard' }, ['デモを試す']),
+    el('h1', null, ['相談・申し込み']),
+    consultForm(supabaseUrl, anonKey),
+    el('p', null, [el('a', { class: 'button ghost', href: '/demo/standard' }, ['デモを試す'])]),
+  ]);
+}
+
+export function privacyView(): HTMLElement {
+  return el('main', { class: 'sheet narrow' }, [
+    siteHeader('/privacy'),
+    el('p', { class: 'eyebrow' }, ['プライバシーポリシー']),
+    el('h1', null, ['個人情報の取扱い']),
+    el('p', null, ['事業者の氏名・住所：【運営者名】【住所】。この欄は未定です。']),
+    el('p', null, ['取得する情報：相談・申し込みフォームに入力された店名、担当者名、メールアドレス、電話番号、URL、相談内容です。']),
+    el('p', null, ['利用目的：導入のご相談への回答と、ご契約の準備のためだけに使います。案内メールは、希望した人にだけ送ります。自動返信メールは送りません。']),
+    el('p', null, ['第三者提供：法令に基づく場合を除き、同意なく提供しません。委託先：【サーバー等の委託先】。']),
+    el('p', null, ['開示・訂正・利用停止の請求先：【連絡先メール】。']),
+    el('p', null, ['制定日：【日付】']),
   ]);
 }
 
@@ -148,13 +162,12 @@ export function mountDemo(
       document.body.classList.remove('widget');
       root.replaceChildren(demoLayout(plan, catalog, supabaseUrl, anonKey));
     })
-    .catch((error: unknown) => {
-      const message = error instanceof Error ? error.message : '読み込めませんでした';
+    .catch(() => {
       root.replaceChildren(
         el('main', { class: 'sheet narrow' }, [
           el('h1', null, ['ただいま表示できません']),
           el('p', null, ['時間をおいて再読み込みしてください。']),
-          el('p', { class: 'hint' }, [message]),
+          el('p', { class: 'hint' }, ['表示できない状態が続くときは、時間をおいて再度開いてください。']),
         ]),
       );
     });
@@ -176,13 +189,15 @@ function demoLayout(plan: PlanId, catalog: Catalog, supabaseUrl: string, anonKey
         el('ul', { class: 'store-points' }, [
           el('li', null, ['ボタンを押すだけで、営業時間・メニュー・予約方法をご案内します']),
           el('li', null, ['「駐車場ある？」のような話し言葉の質問にも、登録した答えでお返しします']),
-          el('li', null, ['答えが決まっていない質問には、無理に答えずお店へおつなぎします']),
+          el('li', null, [
+            plan === 'light'
+              ? '答えが決まっていない質問には、お店の電話・メールをご案内します'
+              : '答えが決まっていない質問には、無理に答えずお店へおつなぎします',
+          ]),
         ]),
-        el('h2', null, ['このプランでできること']),
-        el('ul', null, PLANS.find((item) => item.id === plan)!.points.map((point) => el('li', null, [point]))),
         el('h2', null, ['お店のホームページに置くとこう見えます']),
         el('p', null, [el('a', { href: `/widget/${plan}` }, ['チャットだけの表示を見る'])]),
-        plan === 'light' ? el('p', null, ['']) : adminSample(),
+        ...(plan === 'light' ? [] : [adminSample()]),
       ]),
       chatHost,
     ]),
@@ -194,6 +209,8 @@ function demoLayout(plan: PlanId, catalog: Catalog, supabaseUrl: string, anonKey
     anonKey,
     onIndustry(industry) {
       const shop = catalog.shops.find((item) => item.industry === industry);
+      page.querySelector('.storefront')?.classList.remove('food', 'salon', 'seitai');
+      if (industry) page.querySelector('.storefront')?.classList.add(industry);
       heroTitle.textContent = shop?.name ?? 'お店のホームページ（見本）';
       hours.textContent = shop ? `${shop.hours}　定休日 ${shop.closedDays}　${shop.address}` : 'チャットで業種を選ぶと、営業時間と住所がここに出ます。';
       heroText.textContent = shop

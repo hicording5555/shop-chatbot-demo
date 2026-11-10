@@ -3,7 +3,7 @@ import { readEnv } from './lib/env';
 import { enforceAdminFrame } from './lib/admin-frame';
 import { parseRoute } from './lib/route';
 import { mountAdmin, mountAdminFixture } from './ui/admin';
-import { consultView, landingView, missingEnvView, mountDemo, mountReserve, notFoundView } from './ui/pages';
+import { consultView, landingView, missingEnvView, mountDemo, mountReserve, notFoundView, privacyView } from './ui/pages';
 import './styles.css';
 
 const app = document.querySelector<HTMLElement>('#app');
@@ -73,7 +73,11 @@ function render(): void {
     return;
   }
   if (route.name === 'consult') {
-    app!.replaceChildren(consultView());
+    app.replaceChildren(consultView(env.url, env.anonKey));
+    return;
+  }
+  if (route.name === 'privacy') {
+    app.replaceChildren(privacyView());
     return;
   }
   if (route.name === 'reserve') {

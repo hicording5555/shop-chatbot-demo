@@ -1,11 +1,15 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
-
-const DEFAULT_ORIGINS = 'https://shop-chatbot-demo-0lf2.onrender.com,http://localhost:5173,http://127.0.0.1:5173';
+import {
+  PRODUCTION_ORIGIN,
+  TURNSTILE_TEST_SECRET,
+  contactOk,
+  parseOrigins,
+  turnstileRequired,
+  verifyTurnstile,
+} from '../_shared/policy.ts';
 
 function allowedOrigins(): string[] {
-  const configured = Deno.env.get('HANDOFF_ALLOWED_ORIGINS')?.trim();
-  const list = configured ? configured : DEFAULT_ORIGINS;
-  return list.split(',').map((item) => item.trim()).filter(Boolean);
+  return parseOrigins(Deno.env.get('HANDOFF_ALLOWED_ORIGINS'), PRODUCTION_ORIGIN);
 }
 
 async function ipSalt(serviceKey: string): Promise<string> {
@@ -46,12 +50,6 @@ async function hashIp(ip: string, salt: string): Promise<string> {
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
-function contactOk(contact: string): boolean {
-  if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/i.test(contact)) return true;
-  const digits = contact.replace(/[^0-9]/g, '');
-  return /^[0-9+()（）\s-]+$/.test(contact) && digits.length >= 10 && digits.length <= 15;
-}
-
 function json(status: number, body: unknown, origin: string): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -70,7 +68,7 @@ Deno.serve(async (req) => {
   if (!supabaseUrl || !serviceKey) return json(500, { ok: false, reason: 'invalid' }, origin);
   const salt = await ipSalt(serviceKey);
 
-  let payload: { shop_id?: string; customer_name?: string; contact?: string; question?: string };
+  let payload: { shop_id?: string; customer_name?: string; contact?: string; question?: string; turnstile_token?: string };
   try {
     payload = await req.json();
   } catch {
@@ -85,18 +83,22 @@ Deno.serve(async (req) => {
     return json(400, { ok: false, reason: 'invalid' }, origin);
   }
   if (!contactOk(contact)) return json(400, { ok: false, reason: 'contact_invalid' }, origin);
+  const captcha = await verifyTurnstile({
+    required: turnstileRequired(Deno.env.get('TURNSTILE_REQUIRED')),
+    secret: Deno.env.get('TURNSTILE_SECRET_KEY')?.trim() || TURNSTILE_TEST_SECRET,
+    token: payload.turnstile_token,
+    remoteIp: clientIp(req),
+  });
+  if (captcha === 'captcha_failed') return json(403, { ok: false, reason: 'captcha_failed' }, origin);
 
   const admin = createClient(supabaseUrl, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const shop = await admin.from('shops').select('id, plan, published, phone, email').eq('id', shopId).maybeSingle();
-  if (shop.error || !shop.data || shop.data.published !== true || shop.data.plan !== 'full') {
-    return json(403, {
-      ok: false,
-      reason: 'unavailable',
-      phone: shop.data?.phone ?? '',
-      email: shop.data?.email ?? '',
-    }, origin);
+  const published = shop.data?.published === true;
+  const contacts = published ? { phone: shop.data?.phone ?? '', email: shop.data?.email ?? '' } : {};
+  if (shop.error || !shop.data || !published || shop.data.plan !== 'full') {
+    return json(403, { ok: false, reason: 'unavailable', ...contacts }, origin);
   }
 
   const ipHash = await hashIp(clientIp(req), salt);
@@ -117,12 +119,7 @@ Deno.serve(async (req) => {
           ? 'unavailable'
           : 'invalid';
     const status = reason === 'rate_limited' ? 429 : reason === 'unavailable' ? 403 : 400;
-    return json(status, {
-      ok: false,
-      reason,
-      phone: shop.data.phone,
-      email: shop.data.email,
-    }, origin);
+    return json(status, { ok: false, reason, ...contacts }, origin);
   }
   return json(200, { ok: true }, origin);
 });

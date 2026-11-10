@@ -3,6 +3,7 @@ import { PLAN_LABEL } from '../types';
 import { insertHandoff } from '../data/api';
 import { apply, start, type BotMessage, type ChatState } from '../lib/flow';
 import { el, safeHref } from './dom';
+import { mountTurnstile } from './turnstile';
 
 interface TranscriptItem {
   role: 'user' | 'bot';
@@ -97,7 +98,7 @@ export function mountChat(
     items.push({ role: 'bot', bot: turn.bot });
   }
 
-  async function actHandoff(draft: { name: string; contact: string; question: string }, host: HTMLElement): Promise<void> {
+  async function actHandoff(draft: { name: string; contact: string; question: string; turnstileToken?: string }, host: HTMLElement): Promise<void> {
     const turn = apply(state, { type: 'handoff', draft }, options.catalog);
     if (!turn.effect) {
       state = turn.state;
@@ -107,13 +108,13 @@ export function mountChat(
     }
     host.replaceChildren(el('p', { class: 'hint' }, ['送信しています…']));
     try {
-      await insertHandoff(options.supabaseUrl, options.anonKey, turn.effect.input);
+      await insertHandoff(options.supabaseUrl, options.anonKey, { ...turn.effect.input, turnstileToken: draft.turnstileToken });
       state = turn.state;
       items.push({
         role: 'bot',
         bot: {
           ...turn.bot,
-          paragraphs: [`送信済み：質問内容「${turn.effect.input.question}」`, ...turn.bot.paragraphs],
+          paragraphs: [`送信済み：質問内容「${draft.question.trim()}」`, ...turn.bot.paragraphs],
         },
       });
       paint();
@@ -163,9 +164,9 @@ export function mountChat(
         const href = safeHref(link.href);
         if (!href) continue;
         const attrs: Record<string, string> = { href, class: 'button' };
-        if (/^https?:/i.test(href)) {
+        if (/^https?:/i.test(href) || href.startsWith('/reserve/')) {
           attrs.target = '_blank';
-          attrs.rel = 'noreferrer';
+          attrs.rel = 'noopener noreferrer';
         }
         links.append(el('a', attrs, [link.label]));
       }
@@ -179,7 +180,12 @@ export function mountChat(
         if (active) node.addEventListener('click', () => act(() => actButton(button.id, button.label)));
         row.append(node);
       }
-      bubble.append(row);
+      if (active) bubble.append(row);
+      else {
+        const details = el('details', { class: 'old-choices' });
+        details.append(el('summary', null, ['以前の選択肢']), row);
+        bubble.append(details);
+      }
     }
     if (message.form && active && !formDone) {
       bubble.append(handoffForm(lastQuestion, actHandoff, () => act(() => actButton('handoff:no', '送らずに最初の画面に戻る'))));
@@ -190,26 +196,31 @@ export function mountChat(
 
 function handoffForm(
   questionSeed: string,
-  submit: (draft: { name: string; contact: string; question: string }, host: HTMLElement) => Promise<void>,
+  submit: (draft: { name: string; contact: string; question: string; turnstileToken?: string }, host: HTMLElement) => Promise<void>,
   onCancel: () => void,
 ): HTMLFormElement {
-  const name = el('input', { type: 'text', name: 'name', maxlength: '80', required: 'true', placeholder: '例：山田 花子' }) as HTMLInputElement;
-  const contact = el('input', { type: 'text', name: 'contact', maxlength: '120', required: 'true', placeholder: '例：090-1234-5678 または name@example.com' }) as HTMLInputElement;
+  const name = el('input', { type: 'text', name: 'name', maxlength: '80', required: 'true', placeholder: '山田 花子' }) as HTMLInputElement;
+  const contact = el('input', { type: 'text', name: 'contact', maxlength: '120', required: 'true', placeholder: 'メールまたは電話番号' }) as HTMLInputElement;
   const question = el('textarea', { name: 'question', maxlength: '1000', required: 'true', placeholder: '送りたい質問' }) as HTMLTextAreaElement;
   question.value = questionSeed;
+  const captcha = el('div', { class: 'turnstile-slot' });
+  const readToken = mountTurnstile(captcha);
   const button = el('button', { type: 'submit', class: 'send' }, ['この内容で送る']);
   const cancel = el('button', { type: 'button', class: 'text-button' }, ['送らずに最初の画面に戻る']);
   const form = el('form', { class: 'handoff' }, [
     label('お名前', name),
+    el('p', { class: 'hint' }, ['例：山田 花子']),
     label('連絡先', contact),
+    el('p', { class: 'hint' }, ['例：090-1234-5678 または name@example.com']),
     label('質問内容', question),
+    captcha,
     button,
     cancel,
   ]) as HTMLFormElement;
   cancel.addEventListener('click', () => onCancel());
   form.addEventListener('submit', (event) => {
     event.preventDefault();
-    void submit({ name: name.value, contact: contact.value, question: question.value }, form);
+    void submit({ name: name.value, contact: contact.value, question: question.value, turnstileToken: readToken() }, form);
   });
   return form;
 }
@@ -246,6 +257,7 @@ function handoffErrorText(error: unknown): string {
   if (message === 'rate_limited' || /too many requests/i.test(message)) {
     return 'ただいま送信が集中しています。お電話かメールでお問い合わせください。';
   }
+  if (message === 'captcha_failed') return '確認に失敗しました。時間をおいてもう一度お試しください。';
   if (message === 'invalid' || message === 'contact_invalid') {
     return '入力内容をご確認ください。連絡先はメールか電話番号です。';
   }

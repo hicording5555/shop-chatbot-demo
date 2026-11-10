@@ -10,6 +10,8 @@ services:
         value: https://ofpaiegiilfxloprmcwi.supabase.co
       - key: VITE_SUPABASE_ANON_KEY
         sync: false
+      - key: VITE_TURNSTILE_SITE_KEY
+        sync: false
     routes:
       - type: rewrite
         source: /*
