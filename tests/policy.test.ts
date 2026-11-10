@@ -22,6 +22,7 @@ describe('turnstile', () => {
       secret: TURNSTILE_TEST_SECRET,
       token: '',
       remoteIp: '203.0.113.5',
+      action: 'consult',
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
     expect(result).toBe('skip');
@@ -35,6 +36,7 @@ describe('turnstile', () => {
       secret: '  ',
       token: 'some-token',
       remoteIp: '203.0.113.5',
+      action: 'consult',
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
     expect(result).toBe('captcha_failed');
@@ -48,6 +50,7 @@ describe('turnstile', () => {
       secret: TURNSTILE_TEST_SECRET,
       token: '  ',
       remoteIp: '203.0.113.5',
+      action: 'handoff',
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
     expect(result).toBe('captcha_failed');
@@ -57,13 +60,14 @@ describe('turnstile', () => {
   it('rejects an invalid token when siteverify says no', async () => {
     const fetchImpl = vi.fn(async () => ({
       ok: true,
-      json: async () => ({ success: false }),
+      json: async () => ({ success: false, hostname: 'shop-chatbot-demo-0lf2.onrender.com', action: 'consult' }),
     }));
     const result = await verifyTurnstile({
       required: true,
       secret: 'secret',
       token: 'bad-token',
       remoteIp: '203.0.113.5',
+      action: 'consult',
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
     expect(result).toBe('captcha_failed');
@@ -76,16 +80,61 @@ describe('turnstile', () => {
   it('accepts a token when siteverify says yes', async () => {
     const fetchImpl = vi.fn(async () => ({
       ok: true,
-      json: async () => ({ success: true }),
+      json: async () => ({ success: true, hostname: 'shop-chatbot-demo-0lf2.onrender.com', action: 'handoff' }),
     }));
     const result = await verifyTurnstile({
       required: turnstileRequired('true'),
       secret: 'secret',
       token: 'good-token',
       remoteIp: '203.0.113.5',
+      action: 'handoff',
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
     expect(result).toBe('ok');
+  });
+
+  it('rejects a token whose hostname or action does not match', async () => {
+    const fetchImpl = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ success: true, hostname: 'localhost', action: 'consult' }),
+    }));
+    const hostname = await verifyTurnstile({
+      required: true,
+      secret: 'secret',
+      token: 'token',
+      remoteIp: '203.0.113.5',
+      action: 'consult',
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+    expect(hostname).toBe('captcha_failed');
+    const action = await verifyTurnstile({
+      required: true,
+      secret: 'secret',
+      token: 'token',
+      remoteIp: '203.0.113.5',
+      action: 'handoff',
+      fetchImpl: (async () => ({
+        ok: true,
+        json: async () => ({ success: true, hostname: 'shop-chatbot-demo-0lf2.onrender.com', action: 'consult' }),
+      })) as unknown as typeof fetch,
+    });
+    expect(action).toBe('captcha_failed');
+  });
+
+  it('returns captcha_failed when siteverify times out or throws', async () => {
+    const fetchImpl = vi.fn((_url: string, init?: RequestInit) => new Promise((_resolve, reject) => {
+      init?.signal?.addEventListener('abort', () => reject(new Error('aborted')));
+    }));
+    const result = await verifyTurnstile({
+      required: true,
+      secret: 'secret',
+      token: 'token',
+      remoteIp: '203.0.113.5',
+      action: 'consult',
+      timeoutMs: 15,
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+    expect(result).toBe('captcha_failed');
   });
 });
 

@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
 import {
+  OPERATOR_CONTACT_PLACEHOLDER,
   PRODUCTION_ORIGIN,
   contactOk,
   japanesePhoneOk,
@@ -87,11 +88,28 @@ Deno.serve(async (req) => {
   const commonQuestions = String(payload.common_questions ?? '').trim();
   const referrerName = String(payload.referrer_name ?? '').trim();
   const notes = String(payload.notes ?? '').trim();
-  const wantsVideo = payload.wants_video === true;
   const newsletter = payload.newsletter_opt_in === true;
   const agreed = payload.privacy_agreed === true;
+  const industries = ['美容室・サロン', '整体院', '整骨院・鍼灸院', '飲食店', 'その他'];
+  const plans = ['ライト', '標準', '充実', 'まだ決めていない'];
+  const kinds = ['まず話を聞きたい', 'モニターを希望', '通常の申し込み'];
 
-  if (!shopName || !contactName || !email || !siteUrl.startsWith('https://') || !agreed) {
+  if (
+    shopName.length < 1 || shopName.length > 80
+    || !industries.includes(industry)
+    || industryOther.length > 80
+    || (industry === 'その他' && industryOther.length < 1)
+    || contactName.length < 1 || contactName.length > 80
+    || email.length < 5 || email.length > 120
+    || phone.length > 40
+    || siteUrl.length > 300
+    || !plans.includes(planChoice)
+    || !kinds.includes(applicationKind)
+    || commonQuestions.length > 2000
+    || referrerName.length > 80
+    || notes.length > 2000
+    || !agreed
+  ) {
     return json(400, { ok: false, reason: 'invalid' }, origin);
   }
   if (!contactOk(email) || (phone && !japanesePhoneOk(phone))) {
@@ -102,6 +120,7 @@ Deno.serve(async (req) => {
     secret: Deno.env.get('TURNSTILE_SECRET_KEY')?.trim() ?? '',
     token: typeof payload.turnstile_token === 'string' ? payload.turnstile_token : '',
     remoteIp: clientIp(req),
+    action: 'consult',
   });
   if (captcha === 'captcha_failed') return json(403, { ok: false, reason: 'captcha_failed' }, origin);
 
@@ -120,20 +139,29 @@ Deno.serve(async (req) => {
     application_kind: applicationKind,
     common_questions: neutralizeFormula(commonQuestions),
     referrer_name: neutralizeFormula(referrerName),
-    wants_video: wantsVideo,
+    wants_video: false,
     notes: neutralizeFormula(notes),
     newsletter_opt_in: newsletter,
     ip_hash: await hashIp(clientIp(req), await ipSalt(serviceKey)),
   });
   if (inserted.error) {
     const message = inserted.error.message ?? '';
-    const reason = /rate_limited/i.test(message)
+    const capKind = /rate_limited_global/i.test(message)
+      ? 'consult_global'
+      : /rate_limited_ip/i.test(message)
+        ? 'consult_ip'
+        : /rate_limited/i.test(message)
+          ? 'consult_global'
+          : '';
+    if (capKind) await admin.schema('private').from('cap_hits').insert({ kind: capKind });
+    const reason = capKind
       ? 'rate_limited'
       : /contact_invalid/i.test(message)
         ? 'contact_invalid'
         : 'invalid';
     const status = reason === 'rate_limited' ? 429 : 400;
-    return json(status, { ok: false, reason }, origin);
+    const contact = reason === 'rate_limited' ? { contact: OPERATOR_CONTACT_PLACEHOLDER } : {};
+    return json(status, { ok: false, reason, ...contact }, origin);
   }
   return json(200, { ok: true }, origin);
 });

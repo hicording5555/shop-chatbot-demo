@@ -41,6 +41,7 @@ describe('plan flows', () => {
     const seitai = apply(start('full').state, { type: 'pick', industry: 'seitai' }, catalog);
     expect(seitai.bot.buttons.map((button) => button.label)).toContain('初めての方へ');
     expect(seitai.bot.buttons.map((button) => button.label)).toContain('営業時間・アクセス');
+    expect(seitai.bot.buttons.map((button) => button.label)).toContain('スタッフに聞く');
   });
 
   it('never confirms a reservation and links to the shop page on standard', () => {
@@ -62,14 +63,25 @@ describe('plan flows', () => {
     expect(plainText(turn.bot)).not.toMatch(confirmed);
   });
 
+  it('routes staff talk and reservation changes before the FAQ', () => {
+    const staff = run('full', 'salon', { type: 'text', text: '担当者と話したい' });
+    expect(staff.bot.paragraphs.join('')).toContain('スタッフにメッセージを送れます');
+    expect(staff.bot.paragraphs.join('')).not.toContain('担当者を選べます');
+
+    const change = run('full', 'salon', { type: 'text', text: '予約を変更したい' });
+    expect(plainText(change.bot)).toContain('/reserve/lumiere');
+    expect(change.bot.buttons.map((button) => button.label)).toContain('スタッフに聞く');
+    expect(change.bot.paragraphs.join('')).toContain('ご予約の変更は、予約ページからお手続きください');
+  });
+
   it('sends unknown questions to contact info, or to handoff on the full plan', () => {
     const light = run('light', 'food', { type: 'text', text: 'Wi-Fiはありますか？' });
     expect(plainText(light.bot)).toContain('チャットではお答えできませんでした');
     expect(light.bot.paragraphs.join('')).toContain('03-0000-1100');
 
     const full = run('full', 'food', { type: 'text', text: 'ペット連れでも大丈夫？' });
-    expect(full.bot.paragraphs.join('')).toContain('スタッフに質問を送って');
-    expect(full.bot.buttons.map((button) => button.label)).toEqual(['スタッフに質問を送る', 'いいえ、最初の画面に戻る']);
+    expect(full.bot.paragraphs.join('')).toContain('スタッフにメッセージを送れます');
+    expect(full.bot.buttons.map((button) => button.label)).toEqual(['スタッフに質問を送る', '最初の画面に戻る']);
 
     const bargain = run('standard', 'salon', { type: 'text', text: '値引きして' });
     expect(plainText(bargain.bot)).toContain('お電話かメールでお問い合わせください');
@@ -80,8 +92,8 @@ describe('plan flows', () => {
   it('returns jokes to the menu and gives a non-committal seitai reply', () => {
     const joke = run('full', 'food', { type: 'text', text: '今日の天気は？' });
     expect(joke.bot.form).toBe(false);
-    expect(joke.bot.buttons.length).toBeGreaterThan(0);
-    expect(joke.bot.paragraphs.join('')).not.toContain('スタッフにおつなぎしますか？');
+    expect(joke.bot.buttons.map((button) => button.label)).toContain('スタッフに質問を送る');
+    expect(joke.bot.paragraphs.join('')).toContain('スタッフにメッセージを送れます');
 
     const medical = run('light', 'seitai', { type: 'text', text: '腰のヘルニアは治りますか？' });
     const text = plainText(medical.bot);

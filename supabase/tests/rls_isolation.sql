@@ -310,8 +310,32 @@ begin
   raise exception 'RLS TEST FAILED: light plan changed hours and access';
 exception
   when insufficient_privilege then
-    if sqlerrm not like '%standard plan required%' then
-      raise exception 'RLS TEST FAILED: expected standard plan required, got %', sqlerrm;
+    if sqlerrm not like '%営業時間とアクセスは変更できません%' then
+      raise exception 'RLS TEST FAILED: expected hours and access rejection, got %', sqlerrm;
+    end if;
+end $$;
+do $$
+begin
+  update public.shops
+  set reservation_url = 'https://example.com/stolen'
+  where id = '11111111-1111-4111-8111-111111111111';
+  raise exception 'RLS TEST FAILED: light plan changed reservation_url';
+exception
+  when insufficient_privilege then
+    if sqlerrm not like '%予約ページと補足情報は変更できません%' then
+      raise exception 'RLS TEST FAILED: expected reservation rejection, got %', sqlerrm;
+    end if;
+end $$;
+do $$
+begin
+  update public.shops
+  set extra = '{"probe":true}'::jsonb
+  where id = '11111111-1111-4111-8111-111111111111';
+  raise exception 'RLS TEST FAILED: light plan changed extra';
+exception
+  when insufficient_privilege then
+    if sqlerrm not like '%予約ページと補足情報は変更できません%' then
+      raise exception 'RLS TEST FAILED: expected extra rejection, got %', sqlerrm;
     end if;
 end $$;
 
@@ -427,8 +451,8 @@ begin
   raise exception 'RLS TEST FAILED: industry change passed the role check';
 exception
   when insufficient_privilege then
-    if sqlerrm not like '%immutable shop column%' then
-      raise exception 'RLS TEST FAILED: expected immutable shop column, got %', sqlerrm;
+    if sqlerrm not like '%この列は変更できません%' then
+      raise exception 'RLS TEST FAILED: expected immutable column rejection, got %', sqlerrm;
     end if;
 end $$;
 
@@ -553,8 +577,8 @@ begin
   raise exception 'RLS TEST FAILED: plan change passed the role check';
 exception
   when insufficient_privilege then
-    if sqlerrm not like '%immutable shop column%' then
-      raise exception 'RLS TEST FAILED: expected immutable shop column, got %', sqlerrm;
+    if sqlerrm not like '%この列は変更できません%' then
+      raise exception 'RLS TEST FAILED: expected immutable column rejection, got %', sqlerrm;
     end if;
 end $$;
 
@@ -599,6 +623,57 @@ begin
       end if;
   end;
 end $$;
+
+reset role;
+select set_config('request.jwt.claim.role', '', true);
+select set_config('request.jwt.claims', '', true);
+insert into public.consult_requests (
+  shop_name, industry, contact_name, email, site_url, plan_choice, application_kind
+) values (
+  '空URL', '飲食店', '担当', 'a@example.com', '', 'ライト', 'まず話を聞きたい'
+);
+select public._rls_expect(
+  (select count(*) from public.consult_requests where shop_name = '空URL') = 1,
+  'empty consult url was rejected'
+);
+do $$
+begin
+  insert into public.consult_requests (
+    shop_name, industry, industry_other, contact_name, email, site_url, plan_choice, application_kind
+  ) values (
+    '長すぎ', 'その他', repeat('あ', 81), '担当', 'a@example.com', '', 'ライト', 'まず話を聞きたい'
+  );
+  raise exception 'RLS TEST FAILED: industry_other over 80 characters was stored';
+exception
+  when check_violation then
+    null;
+end $$;
+set local role service_role;
+select public._rls_expect(
+  left(public.accept_consult(
+    '店',
+    '飲食店',
+    '',
+    '担当',
+    '=owner@example.com',
+    '',
+    '',
+    'まだ決めていない',
+    'まず話を聞きたい',
+    '',
+    '',
+    false,
+    '',
+    false,
+    repeat('16', 16)
+  )::text, 1) <> '',
+  'formula email consult returned null'
+);
+reset role;
+select public._rls_expect(
+  (select email from public.consult_requests where shop_name = '店') = '''=owner@example.com',
+  'formula prefix missing on consult email'
+);
 
 reset role;
 do $$

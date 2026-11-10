@@ -1,7 +1,7 @@
 import { TURNSTILE_PRODUCTION_SITE_KEY, TURNSTILE_TEST_SITE_KEY } from '../../supabase/functions/_shared/policy';
 
 type TurnstileApi = {
-  render: (el: HTMLElement, options: { sitekey: string }) => string;
+  render: (el: HTMLElement, options: { sitekey: string; action: string }) => string;
   getResponse: (id?: string) => string;
   reset: (id?: string) => void;
 };
@@ -27,14 +27,14 @@ export function turnstileSiteKey(
   return TURNSTILE_PRODUCTION_SITE_KEY;
 }
 
-export function mountTurnstile(host: HTMLElement): TurnstileHandle {
+export function mountTurnstile(host: HTMLElement, action: 'consult' | 'handoff'): TurnstileHandle {
   const slot = document.createElement('div');
   host.append(slot);
   let widgetId = '';
   const render = () => {
     const turnstile = api();
     if (!turnstile || widgetId) return;
-    widgetId = turnstile.render(slot, { sitekey: turnstileSiteKey() });
+    widgetId = turnstile.render(slot, { sitekey: turnstileSiteKey(), action });
   };
   const existing = document.querySelector<HTMLScriptElement>('script[data-turnstile]');
   if (api()) render();
@@ -45,7 +45,7 @@ export function mountTurnstile(host: HTMLElement): TurnstileHandle {
     script.async = true;
     script.dataset.turnstile = '1';
     script.addEventListener('load', render);
-    document.head.append(script);
+    if (!('happyDOM' in window)) document.head.append(script);
   }
   return {
     token: () => api()?.getResponse(widgetId) ?? '',

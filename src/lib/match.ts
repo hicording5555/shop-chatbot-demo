@@ -11,6 +11,8 @@ export type Intent =
   | { kind: 'medical' }
   | { kind: 'complaint' }
   | { kind: 'cross' }
+  | { kind: 'staff' }
+  | { kind: 'reserve-change' }
   | { kind: 'reserve' }
   | { kind: 'crowd' }
   | { kind: 'hours' }
@@ -46,6 +48,8 @@ const MEDICAL_RE = /ヘルニア|へるにあ|ぎっくり|診断|病気|完治|
 const COMPLAINT_RE = /クレーム|苦情|最悪|返金|ひどい|ふざけ|ぼったくり|文句/;
 const NEGOTIATE_RE = /値引|まけて|安くして|割引して/;
 const RESERVE_RE = /予約|reserve|reservation|booking/;
+const RESERVE_CHANGE_RE = /変更|キャンセル|取消/;
+const STAFF_RE = /スタッフ|人と話|電話したい|電話で|担当者と話|直接聞|オペレーター|問い合わせ|誰かいます|話を聞きたい|メールしたい/;
 const CROWD_RE = /混んで|混雑|混み具合|空いてる|空いてます|空き状況|空きある/;
 const HOURS_RE = /営業時間|営業は|定休|開店|閉店|何時まで|hours|opening|open/;
 const ACCESS_RE = /アクセス|住所|道順|地図|行き方|access|address/;
@@ -96,8 +100,10 @@ export function interpret(query: string, industry: Industry, faqs: Faq[]): Inten
   if (!n) return { kind: 'empty' };
   if (GREETING_RE.test(n)) return { kind: 'greeting' };
   if (industry === 'seitai' && hits(MEDICAL_RE, query)) return { kind: 'medical' };
+  if (hits(STAFF_RE, query)) return { kind: 'staff' };
   if (hits(COMPLAINT_RE, query) || hits(NEGOTIATE_RE, query)) return { kind: 'complaint' };
   if (hits(FOREIGN[industry], query)) return { kind: 'cross' };
+  if (hits(RESERVE_RE, query) && hits(RESERVE_CHANGE_RE, query)) return { kind: 'reserve-change' };
   if (hits(RESERVE_RE, query)) return { kind: 'reserve' };
   if (hits(CROWD_RE, query)) return { kind: 'crowd' };
   if (hits(HOURS_RE, query)) return { kind: 'hours' };

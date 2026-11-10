@@ -204,7 +204,7 @@ function handoffForm(
   const question = el('textarea', { name: 'question', maxlength: '1000', required: 'true', placeholder: '送りたい質問' }) as HTMLTextAreaElement;
   question.value = questionSeed;
   const captcha = el('div', { class: 'turnstile-slot' });
-  const widget = mountTurnstile(captcha);
+  const widget = mountTurnstile(captcha, 'handoff');
   const status = el('p', { class: 'error', role: 'alert' });
   status.hidden = true;
   const button = el('button', { type: 'submit', class: 'send' }, ['この内容で送る']) as HTMLButtonElement;

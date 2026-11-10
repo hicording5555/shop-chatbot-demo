@@ -88,6 +88,7 @@ Deno.serve(async (req) => {
     secret: Deno.env.get('TURNSTILE_SECRET_KEY')?.trim() ?? '',
     token: payload.turnstile_token,
     remoteIp: clientIp(req),
+    action: 'handoff',
   });
   if (captcha === 'captcha_failed') return json(403, { ok: false, reason: 'captcha_failed' }, origin);
 
@@ -110,7 +111,15 @@ Deno.serve(async (req) => {
   });
   if (inserted.error) {
     const message = inserted.error.message ?? '';
-    const reason = /rate[_ ]limited/i.test(message)
+    const capKind = /rate_limited_shop/i.test(message)
+      ? 'handoff_shop'
+      : /rate_limited_ip/i.test(message)
+        ? 'handoff_ip'
+        : /rate[_ ]limited/i.test(message)
+          ? 'handoff_shop'
+          : '';
+    if (capKind) await admin.schema('private').from('cap_hits').insert({ kind: capKind });
+    const reason = capKind
       ? 'rate_limited'
       : /contact_invalid/i.test(message)
         ? 'contact_invalid'

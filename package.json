@@ -17,6 +17,7 @@
   "devDependencies": {
     "@electric-sql/pglite": "^0.3.14",
     "@types/node": "^26.6.6",
+    "happy-dom": "^21.0.4",
     "typescript": "^5.9.3",
     "vite": "^6.4.1",
     "vite-node": "^6.0.0",

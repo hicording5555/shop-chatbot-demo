@@ -18,7 +18,7 @@ const PLANS: { id: PlanId; price: string; monthly: string; audience: string; poi
     id: 'standard',
     price: '初期 40,000円',
     monthly: '月額 10,000円',
-    audience: '予約やメニューの案内まで任せたいお店に',
+    audience: '予約やメニュー案内まで任せたいお店向け',
     points: ['ライトの内容すべて', 'メニュー・営業時間・アクセスをボタンでご案内', 'お使いの予約ページへご案内', '質問と答えをお店で自由に編集'],
   },
   {
@@ -51,7 +51,9 @@ export function landingView(): HTMLElement {
   const cards = PLANS.map((plan) =>
     el('article', { class: 'plan-card' }, [
       el('h2', null, [PLAN_LABEL[plan.id]]),
-      el('p', { class: 'audience' }, [plan.audience]),
+      el('p', { class: 'audience' }, plan.id === 'standard'
+        ? ['予約やメニュー案内まで', el('br'), '任せたいお店向け']
+        : [plan.audience]),
       el('p', { class: 'price' }, [plan.price]),
       el('p', { class: 'price sub' }, [`${plan.monthly}（税別）`]),
       el('ul', null, plan.points.map((point) => el('li', null, [point]))),
@@ -99,10 +101,18 @@ export function privacyView(): HTMLElement {
     el('p', { class: 'eyebrow' }, ['プライバシーポリシー']),
     el('h1', null, ['個人情報の取扱い']),
     el('p', null, ['事業者の氏名・住所：【運営者名】【住所】。この欄は未定です。']),
-    el('p', null, ['取得する情報：相談・申し込みフォームに入力された店名、担当者名、メールアドレス、電話番号、URL、相談内容です。']),
-    el('p', null, ['利用目的：導入のご相談への回答と、ご契約の準備のためだけに使います。案内メールは、希望した人にだけ送ります。自動返信メールは送りません。']),
-    el('p', null, ['第三者提供：法令に基づく場合を除き、同意なく提供しません。委託先：【サーバー等の委託先】。']),
-    el('p', null, ['開示・訂正・利用停止の請求先：【連絡先メール】。']),
+    el('h2', null, ['取得する情報']),
+    el('p', null, ['相談・申し込みフォームに入力された店名、担当者名、メールアドレス、電話番号、URL、相談内容です。引き継ぎフォームでは、お名前、連絡先、質問内容を受け取ります。']),
+    el('h2', null, ['利用目的']),
+    el('p', null, ['導入のご相談への回答と、ご契約の準備のためだけに使います。案内メールは、希望した人にだけ送ります。自動返信メールは送りません。']),
+    el('h2', null, ['委託先']),
+    el('p', null, ['データベースは Supabase、確認用のウィジェットは Cloudflare Turnstile、このサイトの配信は Render に委託しています。法令に基づく場合を除き、同意なく第三者へ提供しません。']),
+    el('h2', null, ['外国にある第三者への提供']),
+    el('p', null, ['相談内容と引き継ぎは Supabase に保存します。保存先のリージョンは【Supabaseの保存リージョン】です。Cloudflare Turnstile と Render は、それぞれのネットワークで通信を扱います。']),
+    el('h2', null, ['保管期間']),
+    el('p', null, ['相談・申し込みは90日で消します。スタッフへの引き継ぎは7日で消します。IPをハッシュした回数の記録は1日で消します。']),
+    el('h2', null, ['開示・訂正・削除の請求']),
+    el('p', null, ['開示、訂正、利用停止、削除のご請求は【連絡先メール】へ送ってください。この欄は未定です。']),
     el('p', null, ['制定日：【日付】']),
   ]);
 }
