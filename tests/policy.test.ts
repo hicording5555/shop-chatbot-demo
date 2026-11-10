@@ -28,6 +28,19 @@ describe('turnstile', () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
+  it('fails closed when the flag is on and the secret is missing', async () => {
+    const fetchImpl = vi.fn();
+    const result = await verifyTurnstile({
+      required: turnstileRequired('true'),
+      secret: '  ',
+      token: 'some-token',
+      remoteIp: '203.0.113.5',
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+    expect(result).toBe('captcha_failed');
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
   it('rejects a missing token when the flag is on, without calling siteverify', async () => {
     const fetchImpl = vi.fn();
     const result = await verifyTurnstile({

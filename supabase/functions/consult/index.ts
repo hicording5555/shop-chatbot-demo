@@ -1,7 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
 import {
   PRODUCTION_ORIGIN,
-  TURNSTILE_TEST_SECRET,
   contactOk,
   japanesePhoneOk,
   neutralizeFormula,
@@ -100,7 +99,7 @@ Deno.serve(async (req) => {
   }
   const captcha = await verifyTurnstile({
     required: turnstileRequired(Deno.env.get('TURNSTILE_REQUIRED')),
-    secret: Deno.env.get('TURNSTILE_SECRET_KEY')?.trim() || TURNSTILE_TEST_SECRET,
+    secret: Deno.env.get('TURNSTILE_SECRET_KEY')?.trim() ?? '',
     token: typeof payload.turnstile_token === 'string' ? payload.turnstile_token : '',
     remoteIp: clientIp(req),
   });

@@ -1,5 +1,6 @@
 export const TURNSTILE_TEST_SITE_KEY = '1x00000000000000000000AA';
 export const TURNSTILE_TEST_SECRET = '1x0000000000000000000000000000000AA';
+export const TURNSTILE_PRODUCTION_SITE_KEY = '0x4AAAAAAF7FrmGh7EBiJfGh';
 export const PRODUCTION_ORIGIN = 'https://shop-chatbot-demo-0lf2.onrender.com';
 
 export function parseOrigins(configured: string | undefined, fallback = PRODUCTION_ORIGIN): string[] {
@@ -19,11 +20,12 @@ export async function verifyTurnstile(args: {
   fetchImpl?: typeof fetch;
 }): Promise<'skip' | 'ok' | 'captcha_failed'> {
   if (!args.required) return 'skip';
+  const secret = args.secret.trim();
   const token = args.token?.trim();
-  if (!token) return 'captcha_failed';
+  if (!secret || !token) return 'captcha_failed';
   const fetchImpl = args.fetchImpl ?? fetch;
   const body = new URLSearchParams();
-  body.set('secret', args.secret);
+  body.set('secret', secret);
   body.set('response', token);
   body.set('remoteip', args.remoteIp);
   const response = await fetchImpl('https://challenges.cloudflare.com/turnstile/v0/siteverify', {

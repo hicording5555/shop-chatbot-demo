@@ -48,9 +48,9 @@ Supabase の SQL Editor で、次の順にファイル全体を実行します�
 
 `HANDOFF_IP_SALT` が無いときは、注入済みの `SUPABASE_SERVICE_ROLE_KEY` を鍵にした HMAC-SHA256（メッセージ `handoff-ip-salt-v1`）をソルトにします。この値はログにもレスポンスにも出しません。`HANDOFF_ALLOWED_ORIGINS` が無いときの初期値は `https://shop-chatbot-demo-0lf2.onrender.com` だけです。ローカルで試すときは、この secret に `https://shop-chatbot-demo-0lf2.onrender.com,http://localhost:5173,http://127.0.0.1:5173` を入れてください。設定があればそちらが優先されます。Origin の無いリクエストは拒否します。ブラウザの `functions.invoke` は Origin を送るので、その呼び出しは通ります。`consult` も同じ Origin 一覧を使います。
 
-Turnstile のサイトキーは、フロントの環境変数 `VITE_TURNSTILE_SITE_KEY` です。本番では Render の環境変数（`render.yaml` の同名キー、`sync: false`）に、Cloudflare で発行したサイトキーを入れます。未設定のあいだは、Cloudflare の常時合格テストキー `1x00000000000000000000AA` を使います。
+Turnstile のサイトキーは公開鍵です。本番の初期値は `0x4AAAAAAF7FrmGh7EBiJfGh`（`shop-chatbot-demo-0lf2.onrender.com` 向け、Managed）で、コードに入っています。`VITE_TURNSTILE_SITE_KEY` があればそちらを使います。`localhost` と `127.0.0.1` では、ホスト名が違うため Cloudflare の常時合格テストキー `1x00000000000000000000AA` を使います。
 
-Turnstile の秘密鍵は、Supabase の Function secret `TURNSTILE_SECRET_KEY` です。未設定のあいだはテスト秘密鍵 `1x0000000000000000000000000000000AA` を使います。検証を必須にする Function secret は `TURNSTILE_REQUIRED` で、初期値はオフ（未設定、または `0` / `false` / `off`）です。オフのあいだはトークンが無くても拒否しません。テストキーは誰でも通るためです。`1` / `true` / `on` / `yes` のときは、Cloudflare の siteverify（`remoteip` 付き）で確認し、無いトークンや無効なトークンは `403` の `captcha_failed` にします。本番の鍵に切り替えるときは、サイトキーと秘密鍵を一緒に入れ、そのあと `TURNSTILE_REQUIRED` を `on` にして両方の関数を再デプロイしてください。
+秘密鍵はリポジトリに置きません。Supabase の Function secret `TURNSTILE_SECRET_KEY` にだけ入れてください。ログにも出しません。`TURNSTILE_REQUIRED` の初期値はオフです。オフのあいだはトークンを確認しません。`1` / `true` / `on` / `yes` のときは siteverify（`remoteip` 付き）で確認します。このとき秘密鍵が未設定なら、テスト秘密鍵には戻さず `403` の `captcha_failed` で拒否します。秘密鍵を入れたあと、`TURNSTILE_REQUIRED` を `true` にして `handoff` と `consult` を再デプロイしてください。
 
 相談の送信は `public.consult_requests` に残します。自動では消しません。IP の回数だけ、引き継ぎの IP 回数とともに、1日より古い行を毎日 03:15 UTC に消します。引き継ぎの本文は、これまでどおり7日より古い行を消します。相談への自動返信メールは送りません。
 

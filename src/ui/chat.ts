@@ -3,7 +3,7 @@ import { PLAN_LABEL } from '../types';
 import { insertHandoff } from '../data/api';
 import { apply, start, type BotMessage, type ChatState } from '../lib/flow';
 import { el, safeHref } from './dom';
-import { mountTurnstile } from './turnstile';
+import { CAPTCHA_FAILED_MESSAGE, mountTurnstile } from './turnstile';
 
 interface TranscriptItem {
   role: 'user' | 'bot';
@@ -98,7 +98,7 @@ export function mountChat(
     items.push({ role: 'bot', bot: turn.bot });
   }
 
-  async function actHandoff(draft: { name: string; contact: string; question: string; turnstileToken?: string }, host: HTMLElement): Promise<void> {
+  async function actHandoff(draft: { name: string; contact: string; question: string; turnstileToken?: string }): Promise<void> {
     const turn = apply(state, { type: 'handoff', draft }, options.catalog);
     if (!turn.effect) {
       state = turn.state;
@@ -106,7 +106,6 @@ export function mountChat(
       paint();
       return;
     }
-    host.replaceChildren(el('p', { class: 'hint' }, ['送信しています…']));
     try {
       await insertHandoff(options.supabaseUrl, options.anonKey, { ...turn.effect.input, turnstileToken: draft.turnstileToken });
       state = turn.state;
@@ -119,6 +118,7 @@ export function mountChat(
       });
       paint();
     } catch (error) {
+      if (error instanceof Error && error.message === 'captcha_failed') throw error;
       const shop = options.catalog.shops.find((item) => item.industry === state.industry);
       const message = handoffErrorText(error);
       const paragraphs = [message, 'デモのため返信しません。実在の個人情報は入力しないでください。'];
@@ -196,7 +196,7 @@ export function mountChat(
 
 function handoffForm(
   questionSeed: string,
-  submit: (draft: { name: string; contact: string; question: string; turnstileToken?: string }, host: HTMLElement) => Promise<void>,
+  submit: (draft: { name: string; contact: string; question: string; turnstileToken?: string }) => Promise<void>,
   onCancel: () => void,
 ): HTMLFormElement {
   const name = el('input', { type: 'text', name: 'name', maxlength: '80', required: 'true', placeholder: '山田 花子' }) as HTMLInputElement;
@@ -204,8 +204,10 @@ function handoffForm(
   const question = el('textarea', { name: 'question', maxlength: '1000', required: 'true', placeholder: '送りたい質問' }) as HTMLTextAreaElement;
   question.value = questionSeed;
   const captcha = el('div', { class: 'turnstile-slot' });
-  const readToken = mountTurnstile(captcha);
-  const button = el('button', { type: 'submit', class: 'send' }, ['この内容で送る']);
+  const widget = mountTurnstile(captcha);
+  const status = el('p', { class: 'error', role: 'alert' });
+  status.hidden = true;
+  const button = el('button', { type: 'submit', class: 'send' }, ['この内容で送る']) as HTMLButtonElement;
   const cancel = el('button', { type: 'button', class: 'text-button' }, ['送らずに最初の画面に戻る']);
   const form = el('form', { class: 'handoff' }, [
     label('お名前', name),
@@ -214,13 +216,28 @@ function handoffForm(
     el('p', { class: 'hint' }, ['例：090-1234-5678 または name@example.com']),
     label('質問内容', question),
     captcha,
+    status,
     button,
     cancel,
   ]) as HTMLFormElement;
   cancel.addEventListener('click', () => onCancel());
   form.addEventListener('submit', (event) => {
     event.preventDefault();
-    void submit({ name: name.value, contact: contact.value, question: question.value, turnstileToken: readToken() }, form);
+    status.hidden = true;
+    button.disabled = true;
+    void submit({ name: name.value, contact: contact.value, question: question.value, turnstileToken: widget.token() }).then(
+      () => {
+        button.disabled = false;
+      },
+      (error: unknown) => {
+        button.disabled = false;
+        widget.reset();
+        if (error instanceof Error && error.message === 'captcha_failed') {
+          status.hidden = false;
+          status.textContent = CAPTCHA_FAILED_MESSAGE;
+        }
+      },
+    );
   });
   return form;
 }
@@ -257,7 +274,7 @@ function handoffErrorText(error: unknown): string {
   if (message === 'rate_limited' || /too many requests/i.test(message)) {
     return 'ただいま送信が集中しています。お電話かメールでお問い合わせください。';
   }
-  if (message === 'captcha_failed') return '確認に失敗しました。時間をおいてもう一度お試しください。';
+  if (message === 'captcha_failed') return CAPTCHA_FAILED_MESSAGE;
   if (message === 'invalid' || message === 'contact_invalid') {
     return '入力内容をご確認ください。連絡先はメールか電話番号です。';
   }

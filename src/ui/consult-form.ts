@@ -1,7 +1,7 @@
 import { createPublicClient } from '../lib/supabase';
 import { contactOk, japanesePhoneOk } from '../../supabase/functions/_shared/policy';
 import { el } from './dom';
-import { mountTurnstile } from './turnstile';
+import { CAPTCHA_FAILED_MESSAGE, mountTurnstile } from './turnstile';
 
 const INDUSTRIES = ['美容室・サロン', '整体院', '整骨院・鍼灸院', '飲食店', 'その他'] as const;
 const PLANS = ['ライト', '標準', '充実', 'まだ決めていない'] as const;
@@ -26,7 +26,7 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
   const newsletter = el('input', { type: 'checkbox' }) as HTMLInputElement;
   const agreed = el('input', { type: 'checkbox' }) as HTMLInputElement;
   const captcha = el('div', { class: 'turnstile-slot' });
-  const readToken = mountTurnstile(captcha);
+  const widget = mountTurnstile(captcha);
   const form = el('form', { class: 'stack consult-form' }, [
     el('p', null, ['必要事項を送ってください。この画面では決済しません。自動返信メールは送りません。お店への訪問はありません。']),
     el('p', null, [
@@ -75,7 +75,7 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
       notes: notes.input.value.trim(),
       newsletter_opt_in: newsletter.checked,
       privacy_agreed: agreed.checked,
-      turnstile_token: readToken(),
+      turnstile_token: widget.token(),
     };
     const problem = validate(payload);
     if (problem) {
@@ -110,10 +110,14 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
       return;
     }
     const client = createPublicClient(supabaseUrl, anonKey);
-    client.functions.invoke('consult', { body: payload }).then(({ data, error }) => {
+    client.functions.invoke('consult', { body: payload }).then(async ({ data, error }) => {
       if (error || (data && data.ok === false)) {
+        widget.reset();
+        const reason = await functionReason(error, data);
         status.hidden = false;
-        status.textContent = '送信できませんでした。入力内容を確認して、時間をおいてもう一度お試しください。';
+        status.textContent = reason === 'captcha_failed'
+          ? CAPTCHA_FAILED_MESSAGE
+          : '送信できませんでした。入力内容を確認して、時間をおいてもう一度お試しください。';
         return;
       }
       form.replaceWith(
@@ -126,6 +130,20 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
     });
   });
   return form;
+}
+
+async function functionReason(error: unknown, data: unknown): Promise<string> {
+  if (data && typeof data === 'object' && 'reason' in data && typeof data.reason === 'string') return data.reason;
+  const context = (error as { context?: { json?: () => Promise<{ reason?: string }> } } | null)?.context;
+  if (context?.json) {
+    try {
+      const body = await context.json();
+      if (body?.reason) return body.reason;
+    } catch {
+      return '';
+    }
+  }
+  return '';
 }
 
 function validate(input: {
