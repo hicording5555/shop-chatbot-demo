@@ -123,7 +123,9 @@ function adminView(
   redraw();
   return el('main', { class: 'sheet' }, [
     el('header', { class: 'site-header' }, [
-      el('a', { class: 'brand', href: '/' }, ['店ボット']),
+      el('a', { class: 'brand', href: '/', 'aria-label': 'ARK ホーム' }, [
+        el('img', { class: 'brand-logo', src: '/brand/ark-logo.webp', alt: 'ARK', width: '600', height: '200' }),
+      ]),
       el('p', null, [email]),
       logoutButton(client, root),
     ]),

@@ -71,8 +71,10 @@ export function start(plan: PlanId): { state: ChatState; bot: BotMessage } {
   };
 }
 
+const INDUSTRY_PICK_ORDER: Industry[] = ['salon', 'seitai', 'food'];
+
 export function industryButtons(): ChatButton[] {
-  return (Object.keys(INDUSTRY_LABEL) as Industry[]).map((industry) => ({
+  return INDUSTRY_PICK_ORDER.map((industry) => ({
     id: `industry:${industry}`,
     label: INDUSTRY_LABEL[industry],
   }));
@@ -444,7 +446,7 @@ function firstVisitMessage(shop: Shop): BotMessage {
       '①ご予約：下のボタンからご予約ください。',
       '②当日：動きやすい服装でお越しください。お着替えもご用意しています。',
       '③カウンセリング：お体の気になるところや、ご希望を伺います。',
-      '初回料金：カウンセリング＋整体（60分）5,500円',
+      '初回料金：カウンセリング＋整体（60分）6,800円',
     ],
     [{ id: 'back:home', label: '最初の画面に戻る' }],
   );

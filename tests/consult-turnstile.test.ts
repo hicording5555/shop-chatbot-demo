@@ -42,7 +42,7 @@ function fill(form: HTMLFormElement): void {
   form.querySelector<HTMLInputElement>('input[value="飲食店"]')!.checked = true;
   form.querySelector<HTMLInputElement>('input[value="まず話を聞きたい"]')!.checked = true;
   form.querySelector<HTMLInputElement>('input[value="ライト"]')!.checked = true;
-  const agreed = Array.from(form.querySelectorAll('label')).find((label) => label.textContent?.includes('個人情報の取扱いに同意する'));
+  const agreed = Array.from(form.querySelectorAll('label')).find((label) => label.textContent?.includes('個人情報の取り扱いに同意する'));
   agreed?.querySelector('input')?.click();
 }
 
@@ -124,7 +124,8 @@ describe('consult turnstile', () => {
     const success = form.querySelector('.consult-success') as HTMLElement;
     expect(success.hidden).toBe(false);
     expect(success.textContent).toContain('ご相談を受け付けました');
-    expect(success.textContent).toContain('通常3営業日以内');
+    expect(success.textContent).toContain('通常【〇営業日】以内');
+    expect(success.textContent).toContain('自動返信メールは送りません');
     expect(success.getAttribute('role')).toBe('status');
     expect(hiddenAncestor(success)).toBe(false);
     expect(form.querySelector('button[type="submit"]')).toBeNull();

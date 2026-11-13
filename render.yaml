@@ -38,3 +38,21 @@ services:
       - path: /admin/*
         name: X-Frame-Options
         value: DENY
+      - path: /admin
+        name: X-Robots-Tag
+        value: noindex, nofollow
+      - path: /admin/*
+        name: X-Robots-Tag
+        value: noindex, nofollow
+      - path: /widget/*
+        name: X-Robots-Tag
+        value: noindex, nofollow
+      - path: /reserve/*
+        name: X-Robots-Tag
+        value: noindex, nofollow
+      - path: /shop-demo
+        name: X-Robots-Tag
+        value: noindex, nofollow
+      - path: /shop-demo/*
+        name: X-Robots-Tag
+        value: noindex, nofollow

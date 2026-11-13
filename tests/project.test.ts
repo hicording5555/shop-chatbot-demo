@@ -167,6 +167,14 @@ describe('render.yaml stays a free static site', () => {
     expect(lastHeader(headers, '/widget/full/komorebi', 'Content-Security-Policy')).not.toBe("frame-ancestors 'none'");
     expect(lastHeader(headers, '/widget/full', 'X-Frame-Options')).toBeUndefined();
     expect(lastHeader(headers, '/consult', 'Content-Security-Policy')).toBeUndefined();
+    expect(lastHeader(headers, '/', 'Content-Security-Policy')).toBeUndefined();
+    expect(lastHeader(headers, '/admin', 'X-Robots-Tag')).toBe('noindex, nofollow');
+    expect(lastHeader(headers, '/admin/settings', 'X-Robots-Tag')).toBe('noindex, nofollow');
+    expect(lastHeader(headers, '/widget/full', 'X-Robots-Tag')).toBe('noindex, nofollow');
+    expect(lastHeader(headers, '/widget/full/komorebi', 'X-Robots-Tag')).toBe('noindex, nofollow');
+    expect(lastHeader(headers, '/reserve/komorebi', 'X-Robots-Tag')).toBe('noindex, nofollow');
+    expect(lastHeader(headers, '/shop-demo/lumiere', 'X-Robots-Tag')).toBe('noindex, nofollow');
+    expect(lastHeader(headers, '/', 'X-Robots-Tag')).toBeUndefined();
     // Render が同じ名前のヘッダーで広い /* を優先した実例があるので、/admin に届く CSP は 'none' だけにする。
     const adminCsp = headers.filter(
       (header) => header.name === 'Content-Security-Policy' && ['/*', '/admin', '/admin/*'].includes(header.path ?? ''),
@@ -198,6 +206,15 @@ describe('env and routes', () => {
     expect(parseRoute('/widget/full/')).toEqual({ name: 'widget', plan: 'full' });
     expect(parseRoute('/admin')).toEqual({ name: 'admin' });
     expect(parseRoute('/consult')).toEqual({ name: 'consult' });
+    expect(parseRoute('/apply')).toEqual({ name: 'consult' });
+    expect(parseRoute('/plans')).toEqual({ name: 'plans' });
+    expect(parseRoute('/flow')).toEqual({ name: 'flow' });
+    expect(parseRoute('/faq')).toEqual({ name: 'faq' });
+    expect(parseRoute('/legal')).toEqual({ name: 'legal' });
+    expect(parseRoute('/terms')).toEqual({ name: 'terms' });
+    expect(parseRoute('/pay').name).toBe('notfound');
+    expect(parseRoute('/pay/complete').name).toBe('notfound');
+    expect(parseRoute('/hearing').name).toBe('notfound');
     expect(parseRoute('/reserve/komorebi')).toEqual({ name: 'reserve', slug: 'komorebi' });
     expect(parseRoute('/missing').name).toBe('notfound');
   });

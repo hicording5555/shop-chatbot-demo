@@ -1,0 +1,3 @@
+# Disallow は付けない。付けるとクローラがページを取得できず、noindex を読めない。
+User-agent: *
+Allow: /
