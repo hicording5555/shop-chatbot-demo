@@ -33,6 +33,32 @@ export function consultFailureMessage(reason: string): string {
   return '送信できませんでした。入力内容を確認して、時間をおいてもう一度お試しください。';
 }
 
+function httpStatus(result: { response?: { status?: number }; error?: { context?: { status?: number } } | null }): number | undefined {
+  if (typeof result.response?.status === 'number') return result.response.status;
+  if (typeof result.error?.context?.status === 'number') return result.error.context.status;
+  return undefined;
+}
+
+function consultAccepted(data: unknown, error: unknown, status: number | undefined): boolean {
+  const okFlag = data && typeof data === 'object' && 'ok' in data ? (data as { ok?: unknown }).ok : undefined;
+  if (okFlag === true) return true;
+  if (okFlag === false) return false;
+  if (error) return false;
+  return typeof status === 'number' ? status >= 200 && status < 300 : true;
+}
+
+function showConsultSuccess(form: HTMLFormElement, shopName: string, contactName: string): void {
+  const success = el('div', { class: 'consult-success', role: 'status', 'aria-live': 'polite', tabindex: '-1' }, [
+    el('h2', null, ['ご相談を受け付けました']),
+    el('p', null, [`${shopName}（担当：${contactName}様）からの内容を受け付けました。`]),
+    el('p', null, ['内容を確認のうえ、通常3営業日以内に、ご記入のメールへご連絡します。自動返信メールは送りません。お店への訪問はありません。']),
+    el('a', { class: 'button', href: '/' }, ['トップへ']),
+  ]);
+  form.replaceChildren(success);
+  success.scrollIntoView?.({ block: 'center' });
+  success.focus();
+}
+
 export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
   const summary = el('p', { class: 'error form-summary', role: 'alert' });
   summary.hidden = true;
@@ -95,8 +121,12 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
   ]) as HTMLFormElement;
   form.noValidate = true;
   let confirmed = false;
+  let sending = false;
+  let accepted = false;
+  const confirmButton = form.querySelector('button[type="submit"]') as HTMLButtonElement;
   form.addEventListener('submit', (event) => {
     event.preventDefault();
+    if (accepted || sending) return;
     summary.hidden = true;
     clearFields([shopName, industryOther, contactName, email, phone, siteUrl, questions, referrer, notes]);
     industry.clear();
@@ -138,6 +168,7 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
         return;
       }
       confirmed = true;
+      confirmButton.hidden = true;
       const sendButton = el('button', { class: 'button', type: 'submit' }, ['この内容で送信する']) as HTMLButtonElement;
       captcha.replaceChildren();
       review.replaceChildren(
@@ -173,7 +204,7 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
           confirmStatus.scrollIntoView?.({ block: 'center' });
           return;
         }
-        if (next === 'ok') {
+        if (next === 'ok' && !sending && !accepted) {
           sendButton.disabled = false;
           if (confirmStatus.textContent === TURNSTILE_WAITING_MESSAGE) confirmStatus.hidden = true;
         }
@@ -191,25 +222,30 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
       return;
     }
     const ready = widget;
+    const sendButton = review.querySelector('button[type="submit"]');
+    if (sendButton instanceof HTMLButtonElement) sendButton.disabled = true;
+    sending = true;
+    confirmStatus.hidden = false;
+    confirmStatus.textContent = '送信中…';
     payload.turnstile_token = ready.token();
     const client = createPublicClient(supabaseUrl, anonKey);
-    client.functions.invoke('consult', { body: payload }).then(async ({ data, error }) => {
-      if (error || (data && data.ok === false)) {
+    void client.functions.invoke('consult', { body: payload }).then(async (result) => {
+      const { data, error } = result;
+      const status = httpStatus(result);
+      if (!consultAccepted(data, error, status)) {
+        sending = false;
         ready.reset();
         const reason = await functionReason(error, data);
+        console.warn(`consult status=${status ?? 'unknown'} reason=${reason || 'unknown'}`);
         confirmStatus.hidden = false;
         confirmStatus.textContent = consultFailureMessage(reason);
+        if (sendButton instanceof HTMLButtonElement) sendButton.disabled = false;
         confirmStatus.scrollIntoView?.({ block: 'center' });
         return;
       }
-      form.replaceWith(
-        el('div', { class: 'stack' }, [
-          el('h2', null, ['ご相談を受け付けました']),
-          el('p', null, [`${payload.shop_name}（担当：${payload.contact_name}様）からの内容を受け付けました。`]),
-          el('p', null, ['内容を確認のうえ、通常3営業日以内に、ご記入のメールへご連絡します。自動返信メールは送りません。お店への訪問はありません。']),
-          el('a', { class: 'button', href: '/' }, ['トップへ']),
-        ]),
-      );
+      accepted = true;
+      sending = false;
+      showConsultSuccess(form, payload.shop_name, payload.contact_name);
     });
 
     function backButton(): HTMLButtonElement {

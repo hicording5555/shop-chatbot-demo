@@ -98,4 +98,32 @@ describe('consult turnstile', () => {
     expect((form.querySelector('.review .form-summary') as HTMLElement).textContent).toBe(TURNSTILE_WAITING_MESSAGE);
     clock.mockRestore();
   });
+
+  it('replaces the confirm screen after a 200 response', async () => {
+    installTurnstile(true);
+    const form = consultForm('http://127.0.0.1:54321', 'fixture-anon-key') as HTMLFormElement;
+    document.body.append(form);
+    fill(form);
+    let resolveInvoke: (value: { data: { ok: boolean }; error: null }) => void = () => {};
+    const pending = new Promise<{ data: { ok: boolean }; error: null }>((resolve) => {
+      resolveInvoke = resolve;
+    });
+    invoke.mockImplementationOnce(() => pending);
+    form.requestSubmit();
+    form.requestSubmit();
+    const sendButton = form.querySelector('.review button[type="submit"]') as HTMLButtonElement;
+    expect(sendButton.disabled).toBe(true);
+    expect(form.querySelector('.review .form-summary')?.textContent).toBe('送信中…');
+    resolveInvoke({ data: { ok: true }, error: null });
+    await pending;
+    await Promise.resolve();
+    const success = form.querySelector('.consult-success') as HTMLElement;
+    expect(success.hidden).toBe(false);
+    expect(success.textContent).toContain('ご相談を受け付けました');
+    expect(success.textContent).toContain('通常3営業日以内');
+    expect(success.getAttribute('role')).toBe('status');
+    expect(hiddenAncestor(success)).toBe(false);
+    expect(form.querySelector('button[type="submit"]')).toBeNull();
+    expect(form.querySelector('.turnstile-slot')).toBeNull();
+  });
 });
