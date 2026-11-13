@@ -2,10 +2,11 @@
   var script = document.currentScript;
   var plan = (script && script.getAttribute('data-plan')) || 'standard';
   if (plan !== 'light' && plan !== 'standard' && plan !== 'full') plan = 'standard';
+  var shop = script && script.getAttribute('data-shop');
   var src = script && script.src ? script.src : window.location.href;
   var origin = new URL(src, window.location.href).origin;
   var iframe = document.createElement('iframe');
-  iframe.src = origin + '/widget/' + plan;
+  iframe.src = origin + '/widget/' + plan + (shop ? '/' + encodeURIComponent(shop) : '');
   iframe.title = 'お店のチャット';
   iframe.setAttribute('loading', 'lazy');
   iframe.style.position = 'fixed';

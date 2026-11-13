@@ -3,6 +3,7 @@ import {
   OPERATOR_CONTACT_PLACEHOLDER,
   PRODUCTION_ORIGIN,
   capKindFromMessage,
+  cleanConsultSiteUrl,
   contactOk,
   japanesePhoneOk,
   neutralizeFormula,
@@ -84,7 +85,7 @@ Deno.serve(async (req) => {
   const contactName = String(payload.contact_name ?? '').trim();
   const email = String(payload.email ?? '').trim();
   const phone = String(payload.phone ?? '').trim();
-  const siteUrl = String(payload.site_url ?? '').trim();
+  const siteUrl = cleanConsultSiteUrl(String(payload.site_url ?? ''));
   const planChoice = String(payload.plan_choice ?? '').trim();
   const applicationKind = String(payload.application_kind ?? '').trim();
   const commonQuestions = String(payload.common_questions ?? '').trim();
@@ -104,6 +105,7 @@ Deno.serve(async (req) => {
     || contactName.length < 1 || contactName.length > 80
     || email.length < 5 || email.length > 120
     || phone.length > 40
+    || siteUrl === null
     || siteUrl.length > 300
     || !plans.includes(planChoice)
     || !kinds.includes(applicationKind)

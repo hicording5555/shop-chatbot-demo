@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { demoFaqs, demoMenu, demoShops } from '../src/data/demo-seed';
-import { apply, plainText, start, type ChatEvent } from '../src/lib/flow';
+import { apply, plainText, start, startLocked, type ChatEvent } from '../src/lib/flow';
 import { splitKeywords } from '../src/lib/keywords';
 import { findSecretFindings } from '../src/lib/secrets';
 import { containsEfficacyClaim, type Catalog, type PlanId } from '../src/types';
@@ -63,6 +63,22 @@ describe('plan flows', () => {
     expect(plainText(turn.bot)).not.toMatch(confirmed);
   });
 
+  it('locks a shop to its menu and staff button', () => {
+    const shop = demoShops.find((item) => item.industry === 'salon');
+    if (!shop) throw new Error('missing salon');
+    const opened = startLocked(
+      'full',
+      shop,
+      demoFaqs.filter((faq) => faq.shopId === shop.id),
+    );
+    expect(opened.state.locked).toBe(true);
+    expect(opened.bot.paragraphs).toEqual(['ご用件を選ぶか、そのまま質問を入力してください。']);
+    expect(opened.bot.buttons.map((button) => button.label)).toContain('メニュー・料金');
+    expect(opened.bot.buttons.map((button) => button.label)).toContain('スタッフに聞く');
+    expect(opened.bot.buttons.map((button) => button.label)).not.toContain('業種を選び直す');
+    expect(start('full').state.locked).toBe(false);
+  });
+
   it('routes staff talk and reservation changes before the FAQ', () => {
     const staff = run('full', 'salon', { type: 'text', text: '担当者と話したい' });
     expect(staff.bot.paragraphs.join('')).toContain('スタッフにメッセージを送れます');
@@ -72,6 +88,15 @@ describe('plan flows', () => {
     expect(plainText(change.bot)).toContain('/reserve/lumiere');
     expect(change.bot.buttons.map((button) => button.label)).toContain('スタッフに聞く');
     expect(change.bot.paragraphs.join('')).toContain('ご予約の変更は、予約ページからお手続きください');
+
+    const cancel = run('full', 'salon', { type: 'text', text: 'キャンセルしたい' });
+    expect(plainText(cancel.bot)).toContain('/reserve/lumiere');
+    expect(cancel.bot.buttons.map((button) => button.label)).toContain('スタッフに聞く');
+    expect(cancel.bot.paragraphs.join('')).not.toContain('チャットではお答えできませんでした');
+
+    const consult = run('full', 'salon', { type: 'text', text: '担当者に相談したい' });
+    expect(consult.bot.paragraphs.join('')).toContain('スタッフにメッセージを送れます');
+    expect(consult.bot.paragraphs.join('')).not.toContain('担当者を選べます');
   });
 
   it('sends unknown questions to contact info, or to handoff on the full plan', () => {

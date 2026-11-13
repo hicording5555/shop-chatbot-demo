@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   TURNSTILE_TEST_SECRET,
+  cleanConsultSiteUrl,
   contactOk,
   japanesePhoneOk,
   capKindFromMessage,
@@ -163,6 +164,18 @@ describe('cap hits', () => {
     expect(lines).toEqual(['record_cap_hit failed kind=handoff_shop']);
     expect(lines[0]).not.toContain('山田');
     expect(lines[0]).not.toContain('a@example.com');
+  });
+});
+
+describe('consult site url', () => {
+  it('allows only empty, http, and https', () => {
+    expect(cleanConsultSiteUrl('')).toBe('');
+    expect(cleanConsultSiteUrl('  https://example.com/shop  ')).toBe('https://example.com/shop');
+    expect(cleanConsultSiteUrl('http://example.com')).toBe('http://example.com');
+    expect(cleanConsultSiteUrl('javascript:alert(1)')).toBeNull();
+    expect(cleanConsultSiteUrl('data:text/plain,hi')).toBeNull();
+    expect(cleanConsultSiteUrl('https://example.com/\n')).toBeNull();
+    expect(cleanConsultSiteUrl('instagram.com/shop')).toBeNull();
   });
 });
 

@@ -52,11 +52,19 @@ function render(): void {
       if (!app) return;
       const url = env.ok ? env.url : 'http://127.0.0.1:54321';
       const key = env.ok ? env.anonKey : 'fixture-anon-key';
-      mountDemo(app, route.plan, url, key, route.name === 'widget', {
-        shops: demoShops,
-        faqs: demoFaqs,
-        menu: demoMenu,
-      });
+      mountDemo(
+        app,
+        route.plan,
+        url,
+        key,
+        route.name === 'widget',
+        {
+          shops: demoShops,
+          faqs: demoFaqs,
+          menu: demoMenu,
+        },
+        route.name === 'widget' ? route.slug : undefined,
+      );
     });
     return;
   }
@@ -88,7 +96,7 @@ function render(): void {
     mountAdmin(app!, createAdminClient(env.url, env.anonKey));
     return;
   }
-  mountDemo(app!, route.plan, env.url, env.anonKey, route.name === 'widget');
+  mountDemo(app!, route.plan, env.url, env.anonKey, route.name === 'widget', undefined, route.name === 'widget' ? route.slug : undefined);
 }
 
 document.addEventListener('click', (event) => {

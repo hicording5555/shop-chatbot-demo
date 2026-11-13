@@ -1,7 +1,8 @@
 import type { Catalog, Industry, PlanId } from '../types';
 import { PLAN_LABEL } from '../types';
 import { insertHandoff } from '../data/api';
-import { apply, start, type BotMessage, type ChatState } from '../lib/flow';
+import { apply, start, startLocked, type BotMessage, type ChatState } from '../lib/flow';
+import type { Shop } from '../types';
 import { el, safeHref } from './dom';
 import { CAPTCHA_FAILED_MESSAGE, mountTurnstile } from './turnstile';
 
@@ -19,10 +20,17 @@ export function mountChat(
     catalog: Catalog;
     supabaseUrl: string;
     anonKey: string;
+    shop?: Shop;
     onIndustry?: (industry: Industry | null) => void;
   },
 ): void {
-  const opened = start(options.plan);
+  const opened = options.shop
+    ? startLocked(
+        options.plan,
+        options.shop,
+        options.catalog.faqs.filter((faq) => faq.shopId === options.shop?.id),
+      )
+    : start(options.plan);
   let state: ChatState = opened.state;
   let lastQuestion = '';
   const items: TranscriptItem[] = [{ role: 'bot', bot: opened.bot }];

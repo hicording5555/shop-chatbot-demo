@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest';
-import { consultForm } from '../src/ui/consult-form';
+import { CONSULT_RATE_LIMIT_MESSAGE, consultForm } from '../src/ui/consult-form';
 
 function mounted(): HTMLFormElement {
   document.body.replaceChildren(consultForm('http://127.0.0.1:54321', 'fixture-anon-key'));
@@ -15,11 +15,11 @@ describe('consult form', () => {
     expect(form.noValidate).toBe(true);
     expect(form.getAttribute('novalidate')).not.toBeNull();
     const other = Array.from(form.querySelectorAll('label')).find((label) => label.textContent?.startsWith('業種（その他）'));
-    expect(other?.hidden).toBe(true);
+    expect((other?.closest('.field-wrap') as HTMLElement).hidden).toBe(true);
     const radio = form.querySelector<HTMLInputElement>('input[value="その他"]');
     radio!.checked = true;
     radio!.dispatchEvent(new Event('change'));
-    expect(other?.hidden).toBe(false);
+    expect((other?.closest('.field-wrap') as HTMLElement).hidden).toBe(false);
     expect(form.textContent).not.toContain('TimeRex');
     expect(form.textContent).not.toContain('ビデオ通話');
   });
@@ -46,5 +46,21 @@ describe('consult form', () => {
     expect(form.textContent).toContain('電話番号：（未記入）');
     expect(form.textContent).toContain('ホームページまたは予約ページのURL：（未記入）');
     expect((form.querySelector('.review') as HTMLElement).hidden).toBe(false);
+    expect(form.querySelector('.review')?.textContent).not.toContain('業種（その他）');
+  });
+
+  it('shows a field error under the field and a summary above the button', () => {
+    const form = mounted();
+    form.requestSubmit();
+    const input = form.querySelector<HTMLInputElement>('input[placeholder="例：〇〇美容室"]');
+    const fieldError = input?.closest('.field-wrap')?.querySelector('.field-error') as HTMLElement;
+    const summary = form.querySelector('.form-summary') as HTMLElement;
+    const button = form.querySelector('button[type="submit"]');
+    expect(fieldError.hidden).toBe(false);
+    expect(fieldError.textContent).toBe('お店の名前を入力してください');
+    expect(summary.hidden).toBe(false);
+    expect(summary.textContent).toBe('お店の名前を入力してください');
+    expect(summary.compareDocumentPosition(button as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(CONSULT_RATE_LIMIT_MESSAGE).toBe('時間をおいてもう一度お試しください。');
   });
 });

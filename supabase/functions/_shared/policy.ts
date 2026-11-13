@@ -70,6 +70,22 @@ export function japanesePhoneOk(contact: string): boolean {
   return !/^(\d)\1+$/.test(digits);
 }
 
+const SITE_URL_CONTROL = /[\u0000-\u001F\u007F]/;
+
+export function cleanConsultSiteUrl(raw: string): string | null {
+  if (SITE_URL_CONTROL.test(raw)) return null;
+  const value = raw.trim();
+  if (value === '') return '';
+  if (/\s/.test(value)) return null;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+    return value;
+  } catch {
+    return null;
+  }
+}
+
 export function contactOk(contact: string): boolean {
   if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/i.test(contact)) return true;
   return japanesePhoneOk(contact);

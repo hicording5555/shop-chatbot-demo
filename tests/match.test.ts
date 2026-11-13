@@ -46,6 +46,9 @@ describe('interpret', () => {
     expect(interpret('値引きして', 'food', faqs('food')).kind).toBe('complaint');
     expect(interpret('今日の天気は？', 'food', faqs('food')).kind).toBe('offtopic');
     expect(interpret('担当者と話したい', 'salon', faqs('salon')).kind).toBe('staff');
+    expect(interpret('担当者に相談したい', 'salon', faqs('salon')).kind).toBe('staff');
+    expect(interpret('担当者に話したい', 'salon', faqs('salon')).kind).toBe('staff');
+    expect(interpret('キャンセルしたい', 'salon', faqs('salon')).kind).toBe('reserve-change');
     expect(interpret('予約を変更したい', 'salon', faqs('salon')).kind).toBe('reserve-change');
     expect(interpret('人と話したい', 'food', faqs('food')).kind).toBe('staff');
     expect(interpret('how much is a haircut', 'salon', faqs('salon')).kind).toBe('menu');

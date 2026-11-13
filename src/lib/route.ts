@@ -3,7 +3,7 @@ import type { PlanId } from '../types';
 export type Route =
   | { name: 'landing' }
   | { name: 'demo'; plan: PlanId }
-  | { name: 'widget'; plan: PlanId }
+  | { name: 'widget'; plan: PlanId; slug?: string }
   | { name: 'admin' }
   | { name: 'consult' }
   | { name: 'privacy' }
@@ -22,7 +22,7 @@ export function parseRoute(pathname: string): Route {
   if (reserve) return { name: 'reserve', slug: reserve[1] };
   const demo = /^\/demo\/(light|standard|full)$/.exec(path);
   if (demo && PLANS.has(demo[1] as PlanId)) return { name: 'demo', plan: demo[1] as PlanId };
-  const widget = /^\/widget\/(light|standard|full)$/.exec(path);
-  if (widget && PLANS.has(widget[1] as PlanId)) return { name: 'widget', plan: widget[1] as PlanId };
+  const widget = /^\/widget\/(light|standard|full)(?:\/([a-z0-9-]+))?$/.exec(path);
+  if (widget && PLANS.has(widget[1] as PlanId)) return { name: 'widget', plan: widget[1] as PlanId, slug: widget[2] };
   return { name: 'notfound' };
 }

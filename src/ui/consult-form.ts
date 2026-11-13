@@ -1,5 +1,5 @@
 import { createPublicClient } from '../lib/supabase';
-import { OPERATOR_CONTACT_PLACEHOLDER, contactOk, japanesePhoneOk } from '../../supabase/functions/_shared/policy';
+import { cleanConsultSiteUrl, contactOk, japanesePhoneOk } from '../../supabase/functions/_shared/policy';
 import { el } from './dom';
 import { CAPTCHA_FAILED_MESSAGE, mountTurnstile } from './turnstile';
 
@@ -25,20 +25,29 @@ type Payload = {
   turnstile_token: string;
 };
 
+export const CONSULT_RATE_LIMIT_MESSAGE = '時間をおいてもう一度お試しください。';
+
+export function consultFailureMessage(reason: string): string {
+  if (reason === 'captcha_failed') return CAPTCHA_FAILED_MESSAGE;
+  if (reason === 'rate_limited') return CONSULT_RATE_LIMIT_MESSAGE;
+  return '送信できませんでした。入力内容を確認して、時間をおいてもう一度お試しください。';
+}
+
 export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
-  const status = el('p', { class: 'error', role: 'alert' });
-  status.hidden = true;
+  const summary = el('p', { class: 'error form-summary', role: 'alert' });
+  summary.hidden = true;
   const shopName = field('お店の名前', '例：〇〇美容室', 80);
   const industry = radios('業種', INDUSTRIES, 'industry');
   const industryOther = field('業種（その他）', '業種を入力', 80);
-  industryOther.label.hidden = true;
+  industryOther.wrap.hidden = true;
   industry.onChange(() => {
-    industryOther.label.hidden = industry.value() !== 'その他';
+    industryOther.wrap.hidden = industry.value() !== 'その他';
+    if (industryOther.wrap.hidden) clearField(industryOther);
   });
   const contactName = field('担当者名', '例：山田 太郎', 80);
   const email = field('メールアドレス', 'example@example.com', 120);
   const phone = field('電話番号', '090-1234-5678', 40);
-  const siteUrl = field('ホームページまたは予約ページのURL', 'https:// または SNSのURL', 300);
+  const siteUrl = field('ホームページまたは予約ページのURL', 'https://example.com', 300);
   const plan = radios('希望プラン', PLANS, 'plan');
   const kind = radios('申込の種類', KINDS, 'kind');
   const questions = area('よく来る質問', '例：営業時間、駐車場、キャンセル方法', 2000);
@@ -46,29 +55,33 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
   const notes = area('備考', 'ご自由にご記入ください', 2000);
   const newsletter = el('input', { type: 'checkbox' }) as HTMLInputElement;
   const agreed = el('input', { type: 'checkbox' }) as HTMLInputElement;
+  const agreedError = errorLine();
   const captcha = el('div', { class: 'turnstile-slot' });
   const widget = mountTurnstile(captcha, 'consult');
   const fields = el('div', { class: 'stack' }, [
-    shopName.label,
+    shopName.wrap,
     industry.box,
-    industryOther.label,
-    contactName.label,
-    email.label,
-    phone.label,
+    industryOther.wrap,
+    contactName.wrap,
+    email.wrap,
+    phone.wrap,
     el('p', { class: 'hint' }, ['電話番号は空欄でも送れます。']),
-    siteUrl.label,
-    el('p', { class: 'hint' }, ['ない場合は空欄か、SNSのURLでも構いません。']),
+    siteUrl.wrap,
+    el('p', { class: 'hint' }, ['ない場合は空欄でも構いません。書くときは http:// または https:// から始めてください。']),
     plan.box,
     kind.box,
-    questions.label,
-    referrer.label,
-    notes.label,
+    questions.wrap,
+    referrer.wrap,
+    notes.wrap,
     el('label', { class: 'check' }, [newsletter, '今後の案内メールを希望する（チェックしない場合は、この相談への返信と契約の履行に必要なメールのみ送ります）']),
     el('label', { class: 'check' }, [agreed, '個人情報の取扱いに同意する']),
+    agreedError,
     captcha,
   ]);
   const review = el('div', { class: 'stack review' });
   review.hidden = true;
+  const confirmStatus = el('p', { class: 'error form-summary', role: 'alert' });
+  confirmStatus.hidden = true;
   const form = el('form', { class: 'stack consult-form', novalidate: 'true' }, [
     el('p', null, ['必要事項を送ってください。この画面では決済しません。自動返信メールは送りません。お店への訪問はありません。']),
     el('p', null, [
@@ -77,7 +90,7 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
       'をご覧ください。',
     ]),
     fields,
-    status,
+    summary,
     el('button', { class: 'button', type: 'submit' }, ['入力内容を確認する']),
     review,
   ]) as HTMLFormElement;
@@ -85,7 +98,11 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
   let confirmed = false;
   form.addEventListener('submit', (event) => {
     event.preventDefault();
-    status.hidden = true;
+    summary.hidden = true;
+    clearFields([shopName, industryOther, contactName, email, phone, siteUrl, questions, referrer, notes]);
+    industry.clear();
+    plan.clear();
+    kind.clear();
     const payload: Payload = {
       shop_name: shopName.input.value.trim(),
       industry: industry.value(),
@@ -93,7 +110,7 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
       contact_name: contactName.input.value.trim(),
       email: email.input.value.trim(),
       phone: phone.input.value.trim(),
-      site_url: siteUrl.input.value.trim(),
+      site_url: cleanConsultSiteUrl(siteUrl.input.value) ?? siteUrl.input.value,
       plan_choice: plan.value(),
       application_kind: kind.value(),
       common_questions: questions.input.value.trim(),
@@ -105,21 +122,20 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
     };
     if (!confirmed) {
       const problem = validate(payload, {
-        shopName: shopName.input,
-        industry: industry.first(),
-        industryOther: industryOther.input,
-        contactName: contactName.input,
-        email: email.input,
-        phone: phone.input,
-        siteUrl: siteUrl.input,
-        plan: plan.first(),
-        kind: kind.first(),
+        shopName,
+        industry,
+        industryOther,
+        contactName,
+        email,
+        phone,
+        siteUrl,
+        plan,
+        kind,
         agreed,
+        agreedError,
       });
       if (problem) {
-        status.hidden = false;
-        status.textContent = problem.message;
-        problem.field.focus();
+        showProblems(summary, problem);
         return;
       }
       confirmed = true;
@@ -129,7 +145,7 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
         el('h2', null, ['入力内容の確認']),
         line('お店の名前', payload.shop_name),
         line('業種', payload.industry),
-        line('業種（その他）', payload.industry_other),
+        ...(payload.industry === 'その他' ? [line('業種（その他）', payload.industry_other)] : []),
         line('担当者名', payload.contact_name),
         line('メールアドレス', payload.email),
         line('電話番号', payload.phone),
@@ -142,6 +158,7 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
         line('案内メール', payload.newsletter_opt_in ? '希望する' : '希望しない'),
         line('個人情報の取扱いへの同意', payload.privacy_agreed ? '同意する' : '同意しない'),
         el('p', null, ['この画面では決済しません。自動返信メールは送りません。']),
+        confirmStatus,
         el('div', { class: 'row' }, [
           el('button', { class: 'button', type: 'submit' }, ['この内容で送信する']),
           backButton(),
@@ -155,12 +172,9 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
       if (error || (data && data.ok === false)) {
         widget.reset();
         const reason = await functionReason(error, data);
-        status.hidden = false;
-        status.textContent = reason === 'captcha_failed'
-          ? CAPTCHA_FAILED_MESSAGE
-          : reason === 'rate_limited'
-            ? `ただいま送信が集中しています。恐れ入りますが、${OPERATOR_CONTACT_PLACEHOLDER}までご連絡ください。`
-            : '送信できませんでした。入力内容を確認して、時間をおいてもう一度お試しください。';
+        confirmStatus.hidden = false;
+        confirmStatus.textContent = consultFailureMessage(reason);
+        confirmStatus.scrollIntoView?.({ block: 'center' });
         return;
       }
       form.replaceWith(
@@ -191,32 +205,49 @@ function line(label: string, value: string): HTMLElement {
   return el('p', null, [`${label}：${value || '（未記入）'}`]);
 }
 
-function validate(
-  input: Payload,
-  fields: {
-    shopName: HTMLInputElement;
-    industry: HTMLElement;
-    industryOther: HTMLInputElement;
-    contactName: HTMLInputElement;
-    email: HTMLInputElement;
-    phone: HTMLInputElement;
-    siteUrl: HTMLInputElement;
-    plan: HTMLElement;
-    kind: HTMLElement;
-    agreed: HTMLInputElement;
-  },
-): { message: string; field: HTMLElement } | null {
-  if (!input.shop_name) return { message: 'お店の名前を入力してください', field: fields.shopName };
-  if (!input.industry) return { message: '業種を選んでください', field: fields.industry };
-  if (input.industry === 'その他' && !input.industry_other) return { message: '業種を入力してください', field: fields.industryOther };
-  if (!input.contact_name) return { message: '担当者名を入力してください', field: fields.contactName };
-  if (!contactOk(input.email)) return { message: '正しいメールアドレスを入力してください', field: fields.email };
-  if (input.phone && !japanesePhoneOk(input.phone)) return { message: '電話番号の形式で入力してください（空欄でも送れます）', field: fields.phone };
-  if (input.site_url.length > 300) return { message: 'URLは300文字以内で入力してください', field: fields.siteUrl };
-  if (!input.plan_choice) return { message: '希望プランを選んでください', field: fields.plan };
-  if (!input.application_kind) return { message: '申込の種類を選んでください', field: fields.kind };
-  if (!input.privacy_agreed) return { message: '同意してから送信してください', field: fields.agreed };
-  return null;
+type Problem = { message: string; field: HTMLElement; error: HTMLElement };
+
+function showProblems(summary: HTMLElement, problems: Problem[]): void {
+  const first = problems[0];
+  if (!first) return;
+  for (const problem of problems) {
+    problem.error.hidden = false;
+    problem.error.textContent = problem.message;
+  }
+  summary.hidden = false;
+  summary.textContent = first.message;
+  first.error.scrollIntoView?.({ block: 'center' });
+  first.field.focus();
+}
+
+function validate(input: Payload, fields: {
+  shopName: Field;
+  industry: RadioGroup;
+  industryOther: Field;
+  contactName: Field;
+  email: Field;
+  phone: Field;
+  siteUrl: Field;
+  plan: RadioGroup;
+  kind: RadioGroup;
+  agreed: HTMLInputElement;
+  agreedError: HTMLElement;
+}): Problem[] | null {
+  const problems: Problem[] = [];
+  const add = (ok: boolean, message: string, field: HTMLElement, error: HTMLElement) => {
+    if (!ok) problems.push({ message, field, error });
+  };
+  add(input.shop_name.length > 0, 'お店の名前を入力してください', fields.shopName.input, fields.shopName.error);
+  add(Boolean(input.industry), '業種を選んでください', fields.industry.first(), fields.industry.error);
+  if (input.industry === 'その他') add(input.industry_other.length > 0, '業種を入力してください', fields.industryOther.input, fields.industryOther.error);
+  add(input.contact_name.length > 0, '担当者名を入力してください', fields.contactName.input, fields.contactName.error);
+  add(contactOk(input.email), '正しいメールアドレスを入力してください', fields.email.input, fields.email.error);
+  add(!input.phone || japanesePhoneOk(input.phone), '電話番号の形式で入力してください（空欄でも送れます）', fields.phone.input, fields.phone.error);
+  add(cleanConsultSiteUrl(fields.siteUrl.input.value) !== null, 'http または https で始まるURLを入力してください（空欄でも送れます）', fields.siteUrl.input, fields.siteUrl.error);
+  add(Boolean(input.plan_choice), '希望プランを選んでください', fields.plan.first(), fields.plan.error);
+  add(Boolean(input.application_kind), '申込の種類を選んでください', fields.kind.first(), fields.kind.error);
+  add(input.privacy_agreed, '同意してから送信してください', fields.agreed, fields.agreedError);
+  return problems.length > 0 ? problems : null;
 }
 
 async function functionReason(error: unknown, data: unknown): Promise<string> {
@@ -233,25 +264,59 @@ async function functionReason(error: unknown, data: unknown): Promise<string> {
   return '';
 }
 
-function field(name: string, placeholder: string, max: number): { label: HTMLElement; input: HTMLInputElement } {
+type Field = { wrap: HTMLElement; input: HTMLInputElement | HTMLTextAreaElement; error: HTMLElement };
+
+type RadioGroup = {
+  box: HTMLElement;
+  error: HTMLElement;
+  value: () => string;
+  first: () => HTMLElement;
+  clear: () => void;
+  onChange: (listener: () => void) => void;
+};
+
+function errorLine(): HTMLElement {
+  const error = el('p', { class: 'error field-error' });
+  error.hidden = true;
+  return error;
+}
+
+function clearField(target: Field): void {
+  target.error.hidden = true;
+  target.error.textContent = '';
+}
+
+function clearFields(targets: Field[]): void {
+  for (const target of targets) clearField(target);
+}
+
+function field(name: string, placeholder: string, max: number): Field {
   const input = el('input', { type: 'text', placeholder, maxlength: String(max) }) as HTMLInputElement;
-  return { label: el('label', { class: 'field' }, [name, input]), input };
+  const error = errorLine();
+  return { wrap: el('div', { class: 'field-wrap' }, [el('label', { class: 'field' }, [name, input]), error]), input, error };
 }
 
-function area(name: string, placeholder: string, max: number): { label: HTMLElement; input: HTMLTextAreaElement } {
+function area(name: string, placeholder: string, max: number): Field {
   const input = el('textarea', { placeholder, maxlength: String(max) }) as HTMLTextAreaElement;
-  return { label: el('label', { class: 'field' }, [name, input]), input };
+  const error = errorLine();
+  return { wrap: el('div', { class: 'field-wrap' }, [el('label', { class: 'field' }, [name, input]), error]), input, error };
 }
 
-function radios(name: string, options: readonly string[], group: string): { box: HTMLElement; value: () => string; first: () => HTMLElement; onChange: (listener: () => void) => void } {
+function radios(name: string, options: readonly string[], group: string): RadioGroup {
   const inputs = options.map((option) => {
     const input = el('input', { type: 'radio', name: group, value: option }) as HTMLInputElement;
     return { option, input, label: el('label', { class: 'check' }, [input, option]) };
   });
+  const error = errorLine();
   return {
-    box: el('fieldset', { class: 'stack' }, [el('legend', null, [name]), ...inputs.map((item) => item.label)]),
+    box: el('fieldset', { class: 'stack' }, [el('legend', null, [name]), ...inputs.map((item) => item.label), error]),
+    error,
     value: () => inputs.find((item) => item.input.checked)?.option ?? '',
     first: () => inputs[0].input,
+    clear: () => {
+      error.hidden = true;
+      error.textContent = '';
+    },
     onChange: (listener) => {
       for (const item of inputs) item.input.addEventListener('change', listener);
     },

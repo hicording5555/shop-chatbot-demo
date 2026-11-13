@@ -108,9 +108,9 @@ export function privacyView(): HTMLElement {
     el('h2', null, ['委託先']),
     el('p', null, ['データベースは Supabase、確認用のウィジェットは Cloudflare Turnstile、このサイトの配信は Render に委託しています。法令に基づく場合を除き、同意なく第三者へ提供しません。']),
     el('h2', null, ['国外での取り扱い']),
-    el('p', null, ['相談内容と引き継ぎは、Supabase の日本（東京リージョン、ap-northeast-1）に保存します。Supabase は米国の会社です。Cloudflare Turnstile と Render は、日本の外で通信を扱うことがあります。']),
+    el('p', null, ['相談内容と引き継ぎは、Supabase の日本（東京リージョン、ap-northeast-1）に保存します。Supabase は米国の会社です。送信を受け取る Edge Functions は米国東部（us-east-1）で動きます。Cloudflare Turnstile と Render は、日本の外で通信を扱うことがあります。']),
     el('h2', null, ['保管期間']),
-    el('p', null, ['相談・申し込みは90日で消します。スタッフへの引き継ぎは7日で消します。IPをハッシュした回数の記録は1日で消します。']),
+    el('p', null, ['相談・申し込みは約90日で消します。スタッフへの引き継ぎは約7日で消します。IPをハッシュした回数の記録は約1日で消します。']),
     el('h2', null, ['開示・訂正・削除の請求']),
     el('p', null, ['開示、訂正、利用停止、削除のご請求は【連絡先メール】へ送ってください。この欄は未定です。']),
     el('p', null, ['制定日：【日付】']),
@@ -131,13 +131,19 @@ export function mountDemo(
   anonKey: string,
   widget: boolean,
   preset?: Catalog,
+  shopSlug?: string,
 ): void {
   if (preset) {
     document.body.classList.toggle('widget', widget);
     if (widget) {
       const frame = el('div', { class: 'widget-frame' });
       root.replaceChildren(frame);
-      mountChat(frame, { plan, catalog: preset, supabaseUrl, anonKey });
+      const shop = widgetShop(preset, shopSlug);
+      if (!shop) {
+        root.replaceChildren(el('main', { class: 'sheet narrow' }, [el('h1', null, ['お店のデータがありません'])]));
+        return;
+      }
+      mountChat(frame, { plan, catalog: preset, supabaseUrl, anonKey, shop });
       return;
     }
     root.replaceChildren(demoLayout(plan, preset, supabaseUrl, anonKey));
@@ -166,7 +172,12 @@ export function mountDemo(
         document.body.classList.add('widget');
         const frame = el('div', { class: 'widget-frame' });
         root.replaceChildren(frame);
-        mountChat(frame, { plan, catalog, supabaseUrl, anonKey });
+        const shop = widgetShop(catalog, shopSlug);
+        if (!shop) {
+          root.replaceChildren(el('main', { class: 'sheet narrow' }, [el('h1', null, ['お店のデータがありません'])]));
+          return;
+        }
+        mountChat(frame, { plan, catalog, supabaseUrl, anonKey, shop });
         return;
       }
       document.body.classList.remove('widget');
@@ -181,6 +192,12 @@ export function mountDemo(
         ]),
       );
     });
+}
+
+function widgetShop(catalog: Catalog, slug?: string): Shop | undefined {
+  const published = catalog.shops.filter((shop) => shop.published);
+  if (slug) return published.find((shop) => shop.slug === slug);
+  return [...published].sort((a, b) => a.slug.localeCompare(b.slug))[0];
 }
 
 function demoLayout(plan: PlanId, catalog: Catalog, supabaseUrl: string, anonKey: string): HTMLElement {

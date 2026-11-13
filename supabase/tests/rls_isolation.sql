@@ -707,7 +707,7 @@ begin
   perform public.record_cap_hit('nope');
   raise exception 'RLS TEST FAILED: invalid cap kind was stored';
 exception
-  when invalid_text_representation then
+  when invalid_parameter_value then
     if sqlerrm not like '%invalid cap kind%' then
       raise exception 'RLS TEST FAILED: expected invalid cap kind, got %', sqlerrm;
     end if;
@@ -717,6 +717,56 @@ reset role;
 select public._rls_expect(
   (select count(*) from private.cap_hits where kind = 'handoff_shop') = 1,
   'service_role cap hit was not stored'
+);
+set local role service_role;
+select public.record_cap_hit('consult_ip');
+select public.record_cap_hit('consult_ip');
+reset role;
+select public._rls_expect(
+  (select count(*) from private.cap_hits where kind = 'consult_ip') = 1,
+  'cap hit was stored twice in the same minute'
+);
+do $$
+begin
+  insert into public.consult_requests (shop_name, industry, contact_name, email, site_url, plan_choice, application_kind)
+  values ('危険', '飲食店', '担当', 'a@example.com', 'javascript:alert(1)', 'ライト', 'まず話を聞きたい');
+  raise exception 'RLS TEST FAILED: javascript url was stored';
+exception
+  when check_violation then
+    null;
+end $$;
+do $$
+begin
+  insert into public.consult_requests (shop_name, industry, contact_name, email, site_url, plan_choice, application_kind)
+  values ('改行', '飲食店', '担当', 'a@example.com', E'https://example.com/\n', 'ライト', 'まず話を聞きたい');
+  raise exception 'RLS TEST FAILED: newline url was stored';
+exception
+  when check_violation then
+    null;
+end $$;
+insert into public.consult_requests (shop_name, industry, contact_name, email, site_url, plan_choice, application_kind)
+values ('http店', '飲食店', '担当', 'a@example.com', 'http://example.com', 'ライト', 'まず話を聞きたい');
+select public._rls_expect(
+  (select count(*) from public.consult_requests where shop_name = 'http店') = 1,
+  'http url was rejected'
+);
+set local role service_role;
+do $$
+begin
+  perform public.accept_consult(
+    '店', '飲食店', '', '担当', 'scheme@example.com', '', 'data:text/plain,hi',
+    'ライト', 'まず話を聞きたい', '', '', false, '', false, repeat('18', 16)
+  );
+  raise exception 'RLS TEST FAILED: data url was accepted';
+exception
+  when check_violation then
+    if sqlerrm not like '%invalid%' then
+      raise exception 'RLS TEST FAILED: expected invalid, got %', sqlerrm;
+    end if;
+end $$;
+select public.accept_consult(
+  'https店', '飲食店', '', '担当', 'https@example.com', '', 'https://example.com/shop',
+  'ライト', 'まず話を聞きたい', '', '', false, '', false, repeat('19', 16)
 );
 
 reset role;
