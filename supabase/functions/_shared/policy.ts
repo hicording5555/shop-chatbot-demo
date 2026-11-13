@@ -23,6 +23,23 @@ export function turnstileRequired(flag: string | undefined): boolean {
   return ['1', 'true', 'on', 'yes'].includes((flag ?? '').trim().toLowerCase());
 }
 
+export type TurnstileCheck = {
+  result: 'skip' | 'ok' | 'captcha_failed';
+  tokenPresent: boolean;
+  errorCodes: string[];
+  hostnameMatched: boolean | null;
+  actionMatched: boolean | null;
+};
+
+export function captchaFailureLog(check: TurnstileCheck): string {
+  return JSON.stringify({
+    token_present: check.tokenPresent,
+    error_codes: check.errorCodes,
+    hostname_matched: check.hostnameMatched,
+    action_matched: check.actionMatched,
+  });
+}
+
 export async function verifyTurnstile(args: {
   required: boolean;
   secret: string;
@@ -32,11 +49,17 @@ export async function verifyTurnstile(args: {
   hostname?: string;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
-}): Promise<'skip' | 'ok' | 'captcha_failed'> {
-  if (!args.required) return 'skip';
+}): Promise<TurnstileCheck> {
+  const token = args.token?.trim() ?? '';
+  const base = {
+    tokenPresent: token.length > 0,
+    errorCodes: [] as string[],
+    hostnameMatched: null as boolean | null,
+    actionMatched: null as boolean | null,
+  };
+  if (!args.required) return { result: 'skip', ...base };
   const secret = args.secret.trim();
-  const token = args.token?.trim();
-  if (!secret || !token || !args.action) return 'captcha_failed';
+  if (!secret || !token || !args.action) return { result: 'captcha_failed', ...base };
   const fetchImpl = args.fetchImpl ?? fetch;
   const body = new URLSearchParams();
   body.set('secret', secret);
@@ -51,13 +74,25 @@ export async function verifyTurnstile(args: {
       body,
       signal: controller.signal,
     });
-    if (!response.ok) return 'captcha_failed';
-    const payload = (await response.json()) as { success?: boolean; hostname?: string; action?: string };
+    if (!response.ok) {
+      return { result: 'captcha_failed', ...base, errorCodes: ['siteverify_http'] };
+    }
+    const payload = (await response.json()) as {
+      success?: boolean;
+      hostname?: string;
+      action?: string;
+      'error-codes'?: string[];
+    };
     const hostname = args.hostname ?? TURNSTILE_HOSTNAME;
-    if (payload.success !== true || payload.hostname !== hostname || payload.action !== args.action) return 'captcha_failed';
-    return 'ok';
+    const hostnameMatched = payload.hostname === hostname;
+    const actionMatched = payload.action === args.action;
+    const errorCodes = Array.isArray(payload['error-codes']) ? payload['error-codes'].filter((code) => typeof code === 'string') : [];
+    if (payload.success !== true || !hostnameMatched || !actionMatched) {
+      return { result: 'captcha_failed', tokenPresent: true, errorCodes, hostnameMatched, actionMatched };
+    }
+    return { result: 'ok', tokenPresent: true, errorCodes, hostnameMatched, actionMatched };
   } catch {
-    return 'captcha_failed';
+    return { result: 'captcha_failed', ...base, errorCodes: ['timeout'] };
   } finally {
     clearTimeout(timeout);
   }

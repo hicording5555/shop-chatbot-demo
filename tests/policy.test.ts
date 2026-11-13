@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   TURNSTILE_TEST_SECRET,
+  captchaFailureLog,
   cleanConsultSiteUrl,
   contactOk,
   japanesePhoneOk,
@@ -12,6 +13,7 @@ import {
   turnstileRequired,
   verifyTurnstile,
 } from '../supabase/functions/_shared/policy';
+import { tokenIsFresh } from '../src/ui/turnstile';
 
 describe('turnstile', () => {
   afterEach(() => {
@@ -28,7 +30,7 @@ describe('turnstile', () => {
       action: 'consult',
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
-    expect(result).toBe('skip');
+    expect(result.result).toBe('skip');
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
@@ -42,7 +44,7 @@ describe('turnstile', () => {
       action: 'consult',
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
-    expect(result).toBe('captcha_failed');
+    expect(result.result).toBe('captcha_failed');
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
@@ -56,7 +58,8 @@ describe('turnstile', () => {
       action: 'handoff',
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
-    expect(result).toBe('captcha_failed');
+    expect(result.result).toBe('captcha_failed');
+    expect(result.tokenPresent).toBe(false);
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
@@ -73,7 +76,7 @@ describe('turnstile', () => {
       action: 'consult',
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
-    expect(result).toBe('captcha_failed');
+    expect(result.result).toBe('captcha_failed');
     const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('https://challenges.cloudflare.com/turnstile/v0/siteverify');
     expect(String(init.body)).toContain('remoteip=203.0.113.5');
@@ -93,7 +96,7 @@ describe('turnstile', () => {
       action: 'handoff',
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
-    expect(result).toBe('ok');
+    expect(result.result).toBe('ok');
   });
 
   it('rejects a token whose hostname or action does not match', async () => {
@@ -109,7 +112,8 @@ describe('turnstile', () => {
       action: 'consult',
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
-    expect(hostname).toBe('captcha_failed');
+    expect(hostname.result).toBe('captcha_failed');
+    expect(hostname.hostnameMatched).toBe(false);
     const action = await verifyTurnstile({
       required: true,
       secret: 'secret',
@@ -121,7 +125,8 @@ describe('turnstile', () => {
         json: async () => ({ success: true, hostname: 'shop-chatbot-demo-0lf2.onrender.com', action: 'consult' }),
       })) as unknown as typeof fetch,
     });
-    expect(action).toBe('captcha_failed');
+    expect(action.result).toBe('captcha_failed');
+    expect(action.actionMatched).toBe(false);
   });
 
   it('returns captcha_failed when siteverify times out or throws', async () => {
@@ -137,7 +142,8 @@ describe('turnstile', () => {
       timeoutMs: 15,
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
-    expect(result).toBe('captcha_failed');
+    expect(result.result).toBe('captcha_failed');
+    expect(result.errorCodes).toEqual(['timeout']);
   });
 });
 
@@ -164,6 +170,29 @@ describe('cap hits', () => {
     expect(lines).toEqual(['record_cap_hit failed kind=handoff_shop']);
     expect(lines[0]).not.toContain('山田');
     expect(lines[0]).not.toContain('a@example.com');
+  });
+});
+
+describe('turnstile freshness', () => {
+  it('treats an empty or old token as not fresh', () => {
+    const now = 1_000_000;
+    expect(tokenIsFresh('', now, now)).toBe(false);
+    expect(tokenIsFresh('token', null, now)).toBe(false);
+    expect(tokenIsFresh('token', now - 60_000, now)).toBe(true);
+    expect(tokenIsFresh('token', now - 5 * 60_000, now)).toBe(false);
+  });
+
+  it('logs only presence, error codes, and match flags', () => {
+    const line = captchaFailureLog({
+      result: 'captcha_failed',
+      tokenPresent: false,
+      errorCodes: ['invalid-input-response'],
+      hostnameMatched: false,
+      actionMatched: true,
+    });
+    expect(line).toContain('"token_present":false');
+    expect(line).toContain('invalid-input-response');
+    expect(line).not.toContain('secret');
   });
 });
 

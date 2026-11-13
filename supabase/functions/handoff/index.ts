@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
 import {
   PRODUCTION_ORIGIN,
   capKindFromMessage,
+  captchaFailureLog,
   contactOk,
   handoffPublicContacts,
   parseOrigins,
@@ -92,7 +93,10 @@ Deno.serve(async (req) => {
     remoteIp: clientIp(req),
     action: 'handoff',
   });
-  if (captcha === 'captcha_failed') return json(403, { ok: false, reason: 'captcha_failed' }, origin);
+  if (captcha.result === 'captcha_failed') {
+    console.log(captchaFailureLog(captcha));
+    return json(403, { ok: false, reason: 'captcha_failed' }, origin);
+  }
 
   const admin = createClient(supabaseUrl, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },

@@ -1,7 +1,7 @@
 import { createPublicClient } from '../lib/supabase';
 import { cleanConsultSiteUrl, contactOk, japanesePhoneOk } from '../../supabase/functions/_shared/policy';
 import { el } from './dom';
-import { CAPTCHA_FAILED_MESSAGE, mountTurnstile } from './turnstile';
+import { CAPTCHA_FAILED_MESSAGE, TURNSTILE_WAITING_MESSAGE, TURNSTILE_WIDGET_ERROR_MESSAGE, mountTurnstile, type TurnstileHandle } from './turnstile';
 
 const INDUSTRIES = ['美容室・サロン', '整体院', '整骨院・鍼灸院', '飲食店', 'その他'] as const;
 const PLANS = ['ライト', '標準', '充実', 'まだ決めていない'] as const;
@@ -57,7 +57,7 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
   const agreed = el('input', { type: 'checkbox' }) as HTMLInputElement;
   const agreedError = errorLine();
   const captcha = el('div', { class: 'turnstile-slot' });
-  const widget = mountTurnstile(captcha, 'consult');
+  let widget: TurnstileHandle | null = null;
   const fields = el('div', { class: 'stack' }, [
     shopName.wrap,
     industry.box,
@@ -76,7 +76,6 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
     el('label', { class: 'check' }, [newsletter, '今後の案内メールを希望する（チェックしない場合は、この相談への返信と契約の履行に必要なメールのみ送ります）']),
     el('label', { class: 'check' }, [agreed, '個人情報の取扱いに同意する']),
     agreedError,
-    captcha,
   ]);
   const review = el('div', { class: 'stack review' });
   review.hidden = true;
@@ -118,7 +117,7 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
       notes: notes.input.value.trim(),
       newsletter_opt_in: newsletter.checked,
       privacy_agreed: agreed.checked,
-      turnstile_token: widget.token(),
+      turnstile_token: '',
     };
     if (!confirmed) {
       const problem = validate(payload, {
@@ -139,8 +138,8 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
         return;
       }
       confirmed = true;
-      fields.hidden = true;
-      review.hidden = false;
+      const sendButton = el('button', { class: 'button', type: 'submit' }, ['この内容で送信する']) as HTMLButtonElement;
+      captcha.replaceChildren();
       review.replaceChildren(
         el('h2', null, ['入力内容の確認']),
         line('お店の名前', payload.shop_name),
@@ -159,18 +158,44 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
         line('個人情報の取扱いへの同意', payload.privacy_agreed ? '同意する' : '同意しない'),
         el('p', null, ['この画面では決済しません。自動返信メールは送りません。']),
         confirmStatus,
-        el('div', { class: 'row' }, [
-          el('button', { class: 'button', type: 'submit' }, ['この内容で送信する']),
-          backButton(),
-        ]),
+        captcha,
+        el('div', { class: 'row' }, [sendButton, backButton()]),
       );
+      fields.hidden = true;
+      review.hidden = false;
+      widget = mountTurnstile(captcha, 'consult');
+      const active = widget;
+      active.onChange((next) => {
+        if (next === 'error') {
+          confirmStatus.hidden = false;
+          confirmStatus.textContent = TURNSTILE_WIDGET_ERROR_MESSAGE;
+          sendButton.disabled = true;
+          confirmStatus.scrollIntoView?.({ block: 'center' });
+          return;
+        }
+        if (next === 'ok') {
+          sendButton.disabled = false;
+          if (confirmStatus.textContent === TURNSTILE_WAITING_MESSAGE) confirmStatus.hidden = true;
+        }
+      });
       review.scrollIntoView?.({ block: 'start' });
       return;
     }
+    if (!widget || !widget.isFresh()) {
+      if (widget && (widget.state() === 'expired' || widget.state() === 'ok')) widget.reset();
+      confirmStatus.hidden = false;
+      confirmStatus.textContent = TURNSTILE_WAITING_MESSAGE;
+      const sendButton = review.querySelector('button[type="submit"]');
+      if (sendButton instanceof HTMLButtonElement) sendButton.disabled = true;
+      confirmStatus.scrollIntoView?.({ block: 'center' });
+      return;
+    }
+    const ready = widget;
+    payload.turnstile_token = ready.token();
     const client = createPublicClient(supabaseUrl, anonKey);
     client.functions.invoke('consult', { body: payload }).then(async ({ data, error }) => {
       if (error || (data && data.ok === false)) {
-        widget.reset();
+        ready.reset();
         const reason = await functionReason(error, data);
         confirmStatus.hidden = false;
         confirmStatus.textContent = consultFailureMessage(reason);
@@ -191,6 +216,8 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
       const back = el('button', { class: 'button ghost', type: 'button' }, ['入力画面に戻る']) as HTMLButtonElement;
       back.addEventListener('click', () => {
         confirmed = false;
+        widget = null;
+        captcha.replaceChildren();
         fields.hidden = false;
         review.hidden = true;
         review.replaceChildren();

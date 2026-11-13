@@ -3,6 +3,7 @@ import {
   OPERATOR_CONTACT_PLACEHOLDER,
   PRODUCTION_ORIGIN,
   capKindFromMessage,
+  captchaFailureLog,
   cleanConsultSiteUrl,
   contactOk,
   japanesePhoneOk,
@@ -126,7 +127,10 @@ Deno.serve(async (req) => {
     remoteIp: clientIp(req),
     action: 'consult',
   });
-  if (captcha === 'captcha_failed') return json(403, { ok: false, reason: 'captcha_failed' }, origin);
+  if (captcha.result === 'captcha_failed') {
+    console.log(captchaFailureLog(captcha));
+    return json(403, { ok: false, reason: 'captcha_failed' }, origin);
+  }
 
   const admin = createClient(supabaseUrl, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },

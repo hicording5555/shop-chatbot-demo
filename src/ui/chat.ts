@@ -4,7 +4,7 @@ import { insertHandoff } from '../data/api';
 import { apply, start, startLocked, type BotMessage, type ChatState } from '../lib/flow';
 import type { Shop } from '../types';
 import { el, safeHref } from './dom';
-import { CAPTCHA_FAILED_MESSAGE, mountTurnstile } from './turnstile';
+import { CAPTCHA_FAILED_MESSAGE, TURNSTILE_WAITING_MESSAGE, TURNSTILE_WIDGET_ERROR_MESSAGE, mountTurnstile } from './turnstile';
 
 interface TranscriptItem {
   role: 'user' | 'bot';
@@ -228,9 +228,29 @@ function handoffForm(
     button,
     cancel,
   ]) as HTMLFormElement;
+  widget.onChange((next) => {
+    if (next === 'error') {
+      status.hidden = false;
+      status.textContent = TURNSTILE_WIDGET_ERROR_MESSAGE;
+      button.disabled = true;
+      return;
+    }
+    if (next === 'ok') {
+      button.disabled = false;
+      if (status.textContent === TURNSTILE_WAITING_MESSAGE) status.hidden = true;
+    }
+  });
   cancel.addEventListener('click', () => onCancel());
   form.addEventListener('submit', (event) => {
     event.preventDefault();
+    if (!widget.isFresh()) {
+      if (widget.state() === 'expired' || widget.state() === 'ok') widget.reset();
+      status.hidden = false;
+      status.textContent = TURNSTILE_WAITING_MESSAGE;
+      button.disabled = true;
+      status.scrollIntoView?.({ block: 'center' });
+      return;
+    }
     status.hidden = true;
     button.disabled = true;
     void submit({ name: name.value, contact: contact.value, question: question.value, turnstileToken: widget.token() }).then(
@@ -240,10 +260,11 @@ function handoffForm(
       (error: unknown) => {
         button.disabled = false;
         widget.reset();
-        if (error instanceof Error && error.message === 'captcha_failed') {
-          status.hidden = false;
-          status.textContent = CAPTCHA_FAILED_MESSAGE;
-        }
+        status.hidden = false;
+        status.textContent = error instanceof Error && error.message === 'captcha_failed'
+          ? CAPTCHA_FAILED_MESSAGE
+          : TURNSTILE_WIDGET_ERROR_MESSAGE;
+        status.scrollIntoView?.({ block: 'center' });
       },
     );
   });
