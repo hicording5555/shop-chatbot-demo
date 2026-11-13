@@ -214,7 +214,11 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
         }
         if (next === 'ok' && !sending && !accepted) {
           sendButton.disabled = false;
-          if (confirmStatus.textContent === TURNSTILE_WAITING_MESSAGE) confirmStatus.hidden = true;
+          if (confirmStatus.textContent === TURNSTILE_WAITING_MESSAGE || confirmStatus.textContent === TURNSTILE_WIDGET_ERROR_MESSAGE) {
+            confirmStatus.hidden = true;
+            confirmStatus.textContent = '';
+            confirmStatus.classList.remove('error');
+          }
         }
       });
       review.scrollIntoView?.({ block: 'start' });
@@ -341,7 +345,7 @@ function validate(input: Payload, fields: {
   add(input.contact_name.length > 0, '担当者名を入力してください', fields.contactName.input, fields.contactName.error);
   add(contactOk(input.email), '正しいメールアドレスを入力してください', fields.email.input, fields.email.error);
   add(!input.phone || japanesePhoneOk(input.phone), '電話番号の形式で入力してください（空欄でも送れます）', fields.phone.input, fields.phone.error);
-  add(cleanConsultSiteUrl(fields.siteUrl.input.value) !== null, 'http または https で始まるURLを入力してください（空欄でも送れます）', fields.siteUrl.input, fields.siteUrl.error);
+  add(cleanConsultSiteUrl(fields.siteUrl.input.value) !== null, 'http:// または https:// から始まる完全なURLを入力してください（空欄でも送れます）', fields.siteUrl.input, fields.siteUrl.error);
   add(Boolean(input.plan_choice), '希望プランを選んでください', fields.plan.first(), fields.plan.error);
   add(Boolean(input.application_kind), '申込の種類を選んでください', fields.kind.first(), fields.kind.error);
   add(input.privacy_agreed, '同意してから送信してください', fields.agreed, fields.agreedError);

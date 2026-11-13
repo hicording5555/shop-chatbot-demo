@@ -64,6 +64,28 @@ describe('consult form', () => {
     expect(CONSULT_RATE_LIMIT_MESSAGE).toBe('時間をおいてもう一度お試しください。');
   });
 
+  it('asks for a full http or https URL and still allows a blank', () => {
+    const form = mounted();
+    const value = (placeholder: string, text: string) => {
+      const input = form.querySelector<HTMLInputElement>(`input[placeholder="${placeholder}"]`);
+      if (!input) throw new Error(placeholder);
+      input.value = text;
+    };
+    value('例：〇〇美容室', '再監査テスト店');
+    value('例：山田 太郎', '山田 太郎');
+    value('example@example.com', 'reaudit@example.com');
+    value('https://example.com', 'https:/example.com');
+    form.querySelector<HTMLInputElement>('input[value="飲食店"]')!.checked = true;
+    form.querySelector<HTMLInputElement>('input[value="まず話を聞きたい"]')!.checked = true;
+    form.querySelector<HTMLInputElement>('input[value="ライト"]')!.checked = true;
+    const agreed = Array.from(form.querySelectorAll('label')).find((label) => label.textContent?.includes('個人情報の取扱いに同意する'));
+    agreed?.querySelector('input')?.click();
+    form.requestSubmit();
+    const url = form.querySelector<HTMLInputElement>('input[placeholder="https://example.com"]');
+    const fieldError = url?.closest('.field-wrap')?.querySelector('.field-error');
+    expect(fieldError?.textContent).toBe('http:// または https:// から始まる完全なURLを入力してください（空欄でも送れます）');
+  });
+
   it('clears the consent error when the checkbox is checked', () => {
     const form = mounted();
     form.requestSubmit();

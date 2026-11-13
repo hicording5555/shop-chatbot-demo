@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   TURNSTILE_TEST_SECRET,
   captchaFailureLog,
+  CONSULT_SITE_URL_PATTERN,
   cleanConsultSiteUrl,
   rateLimitIpKey,
   contactOk,
@@ -209,6 +210,33 @@ describe('consult site url', () => {
     expect(cleanConsultSiteUrl('https:evil.example')).toBeNull();
     expect(cleanConsultSiteUrl('https://example.com/\n')).toBeNull();
     expect(cleanConsultSiteUrl('instagram.com/shop')).toBeNull();
+  });
+
+  it('matches the live en_US.UTF-8 database check for every BMP character', () => {
+    // Source of truth: the live database (locale en_US.UTF-8), measured by
+    // inserting each code point into https://a?b against
+    // site_url ~* '^https?://[^[:space:][:cntrl:]]+$'.
+    // Rejected there: U+0001-U+0020, U+007F-U+00A0, U+1680, U+2000-U+200A,
+    // U+2028, U+2029, U+202F, U+205F, U+3000. U+FEFF is accepted.
+    // U+0000 cannot be stored in Postgres text; this pattern rejects it too.
+    // The embedded test database may be in the C locale, so this test does
+    // not ask it. Surrogates are not characters in that measurement.
+    const dbRejected = (codePoint: number): boolean => {
+      if (codePoint === 0x0000) return true;
+      if (codePoint >= 0x0001 && codePoint <= 0x0020) return true;
+      if (codePoint >= 0x007f && codePoint <= 0x00a0) return true;
+      if (codePoint === 0x1680) return true;
+      if (codePoint >= 0x2000 && codePoint <= 0x200a) return true;
+      if (codePoint === 0x2028 || codePoint === 0x2029 || codePoint === 0x202f || codePoint === 0x205f) return true;
+      return codePoint === 0x3000;
+    };
+    const mismatches: string[] = [];
+    for (let codePoint = 0; codePoint <= 0xffff; codePoint += 1) {
+      if (codePoint >= 0xd800 && codePoint <= 0xdfff) continue;
+      const rejected = !CONSULT_SITE_URL_PATTERN.test(`https://a${String.fromCodePoint(codePoint)}b`);
+      if (rejected !== dbRejected(codePoint)) mismatches.push(codePoint.toString(16));
+    }
+    expect(mismatches).toEqual([]);
   });
 });
 

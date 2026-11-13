@@ -190,6 +190,7 @@ export function mountDemo(
 }
 
 function missingShop(note?: string): HTMLElement {
+  document.body.classList.remove('widget');
   return el('main', { class: 'sheet narrow' }, [
     el('h1', null, ['お店のデータがありません']),
     ...(note ? [el('p', null, [note])] : []),

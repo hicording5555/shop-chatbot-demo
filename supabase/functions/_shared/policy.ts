@@ -106,13 +106,15 @@ export function japanesePhoneOk(contact: string): boolean {
 }
 
 const SITE_URL_CONTROL = /[\u0000-\u001F\u007F]/;
-const CONSULT_SITE_URL = /^https?:\/\/[^\s\u0000-\u001f\u007f]+$/i;
+// Live Postgres en_US.UTF-8 [:space:][:cntrl:], plus U+0000.
+// Do not use \s: it also matches U+FEFF, which that database check allows.
+export const CONSULT_SITE_URL_PATTERN = /^https?:\/\/[^\u0000-\u0020\u007f-\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+$/iu;
 
 export function cleanConsultSiteUrl(raw: string): string | null {
   if (SITE_URL_CONTROL.test(raw)) return null;
   const value = raw.trim();
   if (value === '') return '';
-  if (!CONSULT_SITE_URL.test(value)) return null;
+  if (!CONSULT_SITE_URL_PATTERN.test(value)) return null;
   try {
     const url = new URL(value);
     if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;

@@ -7,7 +7,7 @@ vi.mock('../src/lib/supabase', () => ({
 }));
 
 import { consultForm } from '../src/ui/consult-form';
-import { TURNSTILE_WAITING_MESSAGE } from '../src/ui/turnstile';
+import { TURNSTILE_WAITING_MESSAGE, TURNSTILE_WIDGET_ERROR_MESSAGE } from '../src/ui/turnstile';
 
 type Handlers = {
   callback: (token: string) => void;
@@ -129,5 +129,22 @@ describe('consult turnstile', () => {
     expect(hiddenAncestor(success)).toBe(false);
     expect(form.querySelector('button[type="submit"]')).toBeNull();
     expect(form.querySelector('.turnstile-slot')).toBeNull();
+  });
+
+  it('clears the Turnstile error after the widget succeeds', () => {
+    const fake = installTurnstile(false);
+    const form = consultForm('http://127.0.0.1:54321', 'fixture-anon-key') as HTMLFormElement;
+    document.body.append(form);
+    fill(form);
+    form.requestSubmit();
+    fake.handlers()?.['error-callback']('test-error');
+    const status = form.querySelector('.review .form-summary') as HTMLElement;
+    expect(status.hidden).toBe(false);
+    expect(status.textContent).toBe(TURNSTILE_WIDGET_ERROR_MESSAGE);
+    expect(status.classList.contains('error')).toBe(true);
+    fake.handlers()?.callback('fresh-token');
+    expect(status.hidden).toBe(true);
+    expect(status.textContent).toBe('');
+    expect(status.classList.contains('error')).toBe(false);
   });
 });

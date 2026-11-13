@@ -236,7 +236,11 @@ function handoffForm(
     }
     if (next === 'ok') {
       button.disabled = false;
-      if (status.textContent === TURNSTILE_WAITING_MESSAGE) status.hidden = true;
+      if (status.textContent === TURNSTILE_WAITING_MESSAGE || status.textContent === TURNSTILE_WIDGET_ERROR_MESSAGE) {
+        status.hidden = true;
+        status.textContent = '';
+        status.classList.remove('error');
+      }
     }
   });
   cancel.addEventListener('click', () => onCancel());
