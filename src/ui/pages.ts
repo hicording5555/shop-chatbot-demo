@@ -102,7 +102,7 @@ export function privacyView(): HTMLElement {
     el('h1', null, ['個人情報の取扱い']),
     el('p', null, ['事業者の氏名・住所：【運営者名】【住所】。この欄は未定です。']),
     el('h2', null, ['取得する情報']),
-    el('p', null, ['相談・申し込みフォームに入力された店名、担当者名、メールアドレス、電話番号、URL、相談内容です。引き継ぎフォームでは、お名前、連絡先、質問内容を受け取ります。']),
+    el('p', null, ['相談・申し込みフォームに入力された店名、担当者名、メールアドレス、電話番号、URL、相談内容です。引き継ぎフォームでは、お名前、連絡先、質問内容を受け取ります。IPアドレスとブラウザ情報（User-Agent等）も受け取ります。これらは Supabase のアクセスログに記録され、ボットの確認のために Cloudflare Turnstile へ送られます。']),
     el('h2', null, ['利用目的']),
     el('p', null, ['導入のご相談への回答と、ご契約の準備のためだけに使います。案内メールは、希望した人にだけ送ります。自動返信メールは送りません。']),
     el('h2', null, ['委託先']),
@@ -110,7 +110,7 @@ export function privacyView(): HTMLElement {
     el('h2', null, ['国外での取り扱い']),
     el('p', null, ['相談内容と引き継ぎは、Supabase の日本（東京リージョン、ap-northeast-1）に保存します。Supabase は米国の会社です。送信を受け取る Edge Functions は米国東部（us-east-1）で動きます。Cloudflare Turnstile と Render は、日本の外で通信を扱うことがあります。']),
     el('h2', null, ['保管期間']),
-    el('p', null, ['相談・申し込みは約90日で消します。スタッフへの引き継ぎは約7日で消します。IPをハッシュした回数の記録は約1日で消します。']),
+    el('p', null, ['相談・申し込みは約90日で消します。スタッフへの引き継ぎは約7日で消します。IPをハッシュした回数の記録は最長で約2日で消します。']),
     el('h2', null, ['開示・訂正・削除の請求']),
     el('p', null, ['開示、訂正、利用停止、削除のご請求は【連絡先メール】へ送ってください。この欄は未定です。']),
     el('p', null, ['制定日：【日付】']),
@@ -140,7 +140,7 @@ export function mountDemo(
       root.replaceChildren(frame);
       const shop = widgetShop(preset, shopSlug);
       if (!shop) {
-        root.replaceChildren(el('main', { class: 'sheet narrow' }, [el('h1', null, ['お店のデータがありません'])]));
+        root.replaceChildren(missingShop());
         return;
       }
       mountChat(frame, { plan, catalog: preset, supabaseUrl, anonKey, shop });
@@ -160,12 +160,7 @@ export function mountDemo(
   loadPublicCatalog(client)
     .then((catalog) => {
       if (catalog.shops.length === 0) {
-        root.replaceChildren(
-          el('main', { class: 'sheet narrow' }, [
-            el('h1', null, ['お店のデータがありません']),
-            el('p', null, ['Supabase で migration と seed.sql を実行してください。']),
-          ]),
-        );
+        root.replaceChildren(missingShop('Supabase で migration と seed.sql を実行してください。'));
         return;
       }
       if (widget) {
@@ -174,7 +169,7 @@ export function mountDemo(
         root.replaceChildren(frame);
         const shop = widgetShop(catalog, shopSlug);
         if (!shop) {
-          root.replaceChildren(el('main', { class: 'sheet narrow' }, [el('h1', null, ['お店のデータがありません'])]));
+          root.replaceChildren(missingShop());
           return;
         }
         mountChat(frame, { plan, catalog, supabaseUrl, anonKey, shop });
@@ -192,6 +187,14 @@ export function mountDemo(
         ]),
       );
     });
+}
+
+function missingShop(note?: string): HTMLElement {
+  return el('main', { class: 'sheet narrow' }, [
+    el('h1', null, ['お店のデータがありません']),
+    ...(note ? [el('p', null, [note])] : []),
+    el('a', { class: 'button', href: '/' }, ['デモのトップへ']),
+  ]);
 }
 
 function widgetShop(catalog: Catalog, slug?: string): Shop | undefined {

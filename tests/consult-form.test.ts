@@ -63,4 +63,47 @@ describe('consult form', () => {
     expect(summary.compareDocumentPosition(button as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(CONSULT_RATE_LIMIT_MESSAGE).toBe('時間をおいてもう一度お試しください。');
   });
+
+  it('clears the consent error when the checkbox is checked', () => {
+    const form = mounted();
+    form.requestSubmit();
+    const consent = Array.from(form.querySelectorAll('.field-error')).find((node) => node.textContent === '同意してから送信してください') as HTMLElement;
+    expect(consent.hidden).toBe(false);
+    const agreed = Array.from(form.querySelectorAll('label')).find((label) => label.textContent?.includes('個人情報の取扱いに同意する'));
+    agreed?.querySelector('input')?.click();
+    expect(consent.hidden).toBe(true);
+    expect(consent.textContent).toBe('');
+  });
+
+  it('shows the review button again and clears errors after going back', () => {
+    const form = mounted();
+    form.requestSubmit();
+    expect(form.textContent).toContain('お店の名前を入力してください');
+    const value = (placeholder: string, text: string) => {
+      const input = form.querySelector<HTMLInputElement>(`input[placeholder="${placeholder}"]`);
+      if (!input) throw new Error(placeholder);
+      input.value = text;
+    };
+    value('例：〇〇美容室', '再監査テスト店');
+    value('例：山田 太郎', '山田 太郎');
+    value('example@example.com', 'reaudit@example.com');
+    form.querySelector<HTMLInputElement>('input[value="飲食店"]')!.checked = true;
+    form.querySelector<HTMLInputElement>('input[value="まず話を聞きたい"]')!.checked = true;
+    form.querySelector<HTMLInputElement>('input[value="ライト"]')!.checked = true;
+    const agreed = Array.from(form.querySelectorAll('label')).find((label) => label.textContent?.includes('個人情報の取扱いに同意する'));
+    agreed?.querySelector('input')?.click();
+    form.requestSubmit();
+    const reviewButton = Array.from(form.querySelectorAll('button')).find((button) => button.textContent === '入力内容を確認する') as HTMLButtonElement;
+    expect(reviewButton.hidden).toBe(true);
+    form.requestSubmit();
+    expect(form.textContent).toContain('確認中です');
+    const back = Array.from(form.querySelectorAll('button')).find((button) => button.textContent === '入力画面に戻る');
+    back?.click();
+    expect(reviewButton.hidden).toBe(false);
+    expect(form.querySelector('.review')?.textContent ?? '').not.toContain('確認中です');
+    for (const error of Array.from(form.querySelectorAll('.field-error, .form-summary'))) {
+      expect((error as HTMLElement).hidden).toBe(true);
+      expect(error.textContent).toBe('');
+    }
+  });
 });

@@ -82,6 +82,15 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
   const newsletter = el('input', { type: 'checkbox' }) as HTMLInputElement;
   const agreed = el('input', { type: 'checkbox' }) as HTMLInputElement;
   const agreedError = errorLine();
+  agreed.addEventListener('change', () => {
+    if (!agreed.checked) return;
+    agreedError.hidden = true;
+    agreedError.textContent = '';
+    if (summary.textContent === '同意してから送信してください') {
+      summary.hidden = true;
+      summary.textContent = '';
+    }
+  });
   const captcha = el('div', { class: 'turnstile-slot' });
   let widget: TurnstileHandle | null = null;
   const fields = el('div', { class: 'stack' }, [
@@ -198,8 +207,7 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
       const active = widget;
       active.onChange((next) => {
         if (next === 'error') {
-          confirmStatus.hidden = false;
-          confirmStatus.textContent = TURNSTILE_WIDGET_ERROR_MESSAGE;
+          showNotice(confirmStatus, TURNSTILE_WIDGET_ERROR_MESSAGE, 'error');
           sendButton.disabled = true;
           confirmStatus.scrollIntoView?.({ block: 'center' });
           return;
@@ -214,8 +222,7 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
     }
     if (!widget || !widget.isFresh()) {
       if (widget && (widget.state() === 'expired' || widget.state() === 'ok')) widget.reset();
-      confirmStatus.hidden = false;
-      confirmStatus.textContent = TURNSTILE_WAITING_MESSAGE;
+      showNotice(confirmStatus, TURNSTILE_WAITING_MESSAGE, 'info');
       const sendButton = review.querySelector('button[type="submit"]');
       if (sendButton instanceof HTMLButtonElement) sendButton.disabled = true;
       confirmStatus.scrollIntoView?.({ block: 'center' });
@@ -225,8 +232,7 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
     const sendButton = review.querySelector('button[type="submit"]');
     if (sendButton instanceof HTMLButtonElement) sendButton.disabled = true;
     sending = true;
-    confirmStatus.hidden = false;
-    confirmStatus.textContent = '送信中…';
+    showNotice(confirmStatus, '送信中…', 'info');
     payload.turnstile_token = ready.token();
     const client = createPublicClient(supabaseUrl, anonKey);
     void client.functions.invoke('consult', { body: payload }).then(async (result) => {
@@ -234,11 +240,11 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
       const status = httpStatus(result);
       if (!consultAccepted(data, error, status)) {
         sending = false;
+        if (!confirmed) return;
         ready.reset();
         const reason = await functionReason(error, data);
         console.warn(`consult status=${status ?? 'unknown'} reason=${reason || 'unknown'}`);
-        confirmStatus.hidden = false;
-        confirmStatus.textContent = consultFailureMessage(reason);
+        showNotice(confirmStatus, consultFailureMessage(reason), 'error');
         if (sendButton instanceof HTMLButtonElement) sendButton.disabled = false;
         confirmStatus.scrollIntoView?.({ block: 'center' });
         return;
@@ -257,11 +263,40 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
         fields.hidden = false;
         review.hidden = true;
         review.replaceChildren();
+        confirmButton.hidden = false;
+        summary.hidden = true;
+        summary.textContent = '';
+        clearFields([shopName, industryOther, contactName, email, phone, siteUrl, questions, referrer, notes]);
+        industry.clear();
+        plan.clear();
+        kind.clear();
+        agreedError.hidden = true;
+        agreedError.textContent = '';
+        confirmStatus.hidden = true;
+        confirmStatus.textContent = '';
+        confirmStatus.classList.add('error');
+        confirmStatus.classList.remove('info');
+        confirmStatus.setAttribute('role', 'alert');
+        confirmStatus.removeAttribute('aria-live');
       });
       return back;
     }
   });
   return form;
+}
+
+function showNotice(node: HTMLElement, message: string, tone: 'info' | 'error'): void {
+  node.hidden = false;
+  node.textContent = message;
+  node.classList.toggle('error', tone === 'error');
+  node.classList.toggle('info', tone === 'info');
+  if (tone === 'info') {
+    node.setAttribute('role', 'status');
+    node.setAttribute('aria-live', 'polite');
+    return;
+  }
+  node.setAttribute('role', 'alert');
+  node.removeAttribute('aria-live');
 }
 
 function line(label: string, value: string): HTMLElement {

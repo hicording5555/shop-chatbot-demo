@@ -3,6 +3,7 @@ import {
   TURNSTILE_TEST_SECRET,
   captchaFailureLog,
   cleanConsultSiteUrl,
+  rateLimitIpKey,
   contactOk,
   japanesePhoneOk,
   capKindFromMessage,
@@ -203,8 +204,25 @@ describe('consult site url', () => {
     expect(cleanConsultSiteUrl('http://example.com')).toBe('http://example.com');
     expect(cleanConsultSiteUrl('javascript:alert(1)')).toBeNull();
     expect(cleanConsultSiteUrl('data:text/plain,hi')).toBeNull();
+    expect(cleanConsultSiteUrl('ftp://example.com')).toBeNull();
+    expect(cleanConsultSiteUrl('https:/example.com')).toBeNull();
+    expect(cleanConsultSiteUrl('https:evil.example')).toBeNull();
     expect(cleanConsultSiteUrl('https://example.com/\n')).toBeNull();
     expect(cleanConsultSiteUrl('instagram.com/shop')).toBeNull();
+  });
+});
+
+describe('rate limit ip key', () => {
+  it('keeps one key per IPv6 /64 and leaves IPv4 unchanged', () => {
+    const same = rateLimitIpKey('2001:db8:1:2::1');
+    expect(rateLimitIpKey('2001:db8:1:2::ffff')).toBe(same);
+    expect(rateLimitIpKey('2001:0db8:0001:0002:0000:0000:0000:0001')).toBe(same);
+    expect(rateLimitIpKey('2001:db8:1:3::1')).not.toBe(same);
+    expect(rateLimitIpKey('203.0.113.10')).toBe('203.0.113.10');
+    expect(rateLimitIpKey('192.0.2.1')).toBe('192.0.2.1');
+    expect(rateLimitIpKey('::ffff:203.0.113.10')).toBe('203.0.113.10');
+    expect(rateLimitIpKey('::FFFF:192.0.2.1')).toBe(rateLimitIpKey('192.0.2.1'));
+    expect(rateLimitIpKey('0:0:0:0:0:ffff:192.0.2.1')).toBe('192.0.2.1');
   });
 });
 

@@ -106,12 +106,13 @@ export function japanesePhoneOk(contact: string): boolean {
 }
 
 const SITE_URL_CONTROL = /[\u0000-\u001F\u007F]/;
+const CONSULT_SITE_URL = /^https?:\/\/[^\s\u0000-\u001f\u007f]+$/i;
 
 export function cleanConsultSiteUrl(raw: string): string | null {
   if (SITE_URL_CONTROL.test(raw)) return null;
   const value = raw.trim();
   if (value === '') return '';
-  if (/\s/.test(value)) return null;
+  if (!CONSULT_SITE_URL.test(value)) return null;
   try {
     const url = new URL(value);
     if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
@@ -119,6 +120,62 @@ export function cleanConsultSiteUrl(raw: string): string | null {
   } catch {
     return null;
   }
+}
+
+function canonicalIpv4(value: string): string | null {
+  const match = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(value);
+  if (!match) return null;
+  const parts = match.slice(1).map((part) => Number(part));
+  if (parts.some((part) => !Number.isInteger(part) || part > 255)) return null;
+  return parts.join('.');
+}
+
+function parseIpv6(value: string): number[] | null {
+  const lower = value.toLowerCase();
+  if (lower.includes('.')) {
+    const lastColon = lower.lastIndexOf(':');
+    if (lastColon < 0) return null;
+    const v4 = canonicalIpv4(lower.slice(lastColon + 1));
+    if (!v4) return null;
+    const [a, b, c, d] = v4.split('.').map(Number);
+    const hi = ((a << 8) | b).toString(16);
+    const lo = ((c << 8) | d).toString(16);
+    return parseIpv6(`${lower.slice(0, lastColon)}:${hi}:${lo}`);
+  }
+  const halves = lower.split('::');
+  if (halves.length > 2) return null;
+  const parseSide = (side: string): number[] | null => {
+    if (side === '') return [];
+    const parts = side.split(':');
+    if (parts.some((part) => !/^[0-9a-f]{1,4}$/.test(part))) return null;
+    return parts.map((part) => Number.parseInt(part, 16));
+  };
+  if (halves.length === 1) {
+    const parts = parseSide(halves[0]);
+    return parts && parts.length === 8 ? parts : null;
+  }
+  const left = parseSide(halves[0]);
+  const right = parseSide(halves[1]);
+  if (!left || !right || left.length + right.length >= 8) return null;
+  return [...left, ...Array<number>(8 - left.length - right.length).fill(0), ...right];
+}
+
+function ipv4FromMapped(parts: number[]): string {
+  const hi = parts[6] ?? 0;
+  const lo = parts[7] ?? 0;
+  return `${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`;
+}
+
+/** Address used for the IP send-count. IPv4 is unchanged. IPv6 keeps only the /64 prefix. */
+export function rateLimitIpKey(ip: string): string {
+  const raw = ip.trim().split('%')[0] ?? ip.trim();
+  const v4 = canonicalIpv4(raw);
+  if (v4) return v4;
+  const v6 = parseIpv6(raw);
+  if (!v6) return ip.trim();
+  const mapped = v6[0] === 0 && v6[1] === 0 && v6[2] === 0 && v6[3] === 0 && v6[4] === 0 && v6[5] === 0xffff;
+  if (mapped) return ipv4FromMapped(v6);
+  return v6.slice(0, 4).map((part) => part.toString(16)).join(':');
 }
 
 export function contactOk(contact: string): boolean {

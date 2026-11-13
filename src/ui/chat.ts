@@ -230,8 +230,7 @@ function handoffForm(
   ]) as HTMLFormElement;
   widget.onChange((next) => {
     if (next === 'error') {
-      status.hidden = false;
-      status.textContent = TURNSTILE_WIDGET_ERROR_MESSAGE;
+      showHandoffNotice(status, TURNSTILE_WIDGET_ERROR_MESSAGE, 'error');
       button.disabled = true;
       return;
     }
@@ -245,8 +244,7 @@ function handoffForm(
     event.preventDefault();
     if (!widget.isFresh()) {
       if (widget.state() === 'expired' || widget.state() === 'ok') widget.reset();
-      status.hidden = false;
-      status.textContent = TURNSTILE_WAITING_MESSAGE;
+      showHandoffNotice(status, TURNSTILE_WAITING_MESSAGE, 'info');
       button.disabled = true;
       status.scrollIntoView?.({ block: 'center' });
       return;
@@ -260,15 +258,30 @@ function handoffForm(
       (error: unknown) => {
         button.disabled = false;
         widget.reset();
-        status.hidden = false;
-        status.textContent = error instanceof Error && error.message === 'captcha_failed'
-          ? CAPTCHA_FAILED_MESSAGE
-          : TURNSTILE_WIDGET_ERROR_MESSAGE;
+        showHandoffNotice(
+          status,
+          error instanceof Error && error.message === 'captcha_failed' ? CAPTCHA_FAILED_MESSAGE : TURNSTILE_WIDGET_ERROR_MESSAGE,
+          'error',
+        );
         status.scrollIntoView?.({ block: 'center' });
       },
     );
   });
   return form;
+}
+
+function showHandoffNotice(node: HTMLElement, message: string, tone: 'info' | 'error'): void {
+  node.hidden = false;
+  node.textContent = message;
+  node.classList.toggle('error', tone === 'error');
+  node.classList.toggle('info', tone === 'info');
+  if (tone === 'info') {
+    node.setAttribute('role', 'status');
+    node.setAttribute('aria-live', 'polite');
+    return;
+  }
+  node.setAttribute('role', 'alert');
+  node.removeAttribute('aria-live');
 }
 
 function label(text: string, field: HTMLElement): HTMLElement {

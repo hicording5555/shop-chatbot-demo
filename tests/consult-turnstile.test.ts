@@ -77,6 +77,10 @@ describe('consult turnstile', () => {
     const button = review.querySelector('button[type="submit"]') as HTMLButtonElement;
     expect(status.hidden).toBe(false);
     expect(status.textContent).toBe(TURNSTILE_WAITING_MESSAGE);
+    expect(status.classList.contains('error')).toBe(false);
+    expect(status.classList.contains('info')).toBe(true);
+    expect(status.getAttribute('role')).toBe('status');
+    expect(status.getAttribute('aria-live')).toBe('polite');
     expect(status.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(button.disabled).toBe(true);
     expect(invoke).not.toHaveBeenCalled();
