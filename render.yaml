@@ -23,9 +23,6 @@ services:
       - path: /embed.js
         name: Cache-Control
         value: public, max-age=300
-      - path: /*
-        name: Content-Security-Policy
-        value: frame-ancestors *
       - path: /widget/*
         name: Content-Security-Policy
         value: frame-ancestors *
