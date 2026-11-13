@@ -1,4 +1,5 @@
 import { createPublicClient } from '../lib/supabase';
+import { CONSULT_INTRO } from '../content/service';
 import { cleanConsultSiteUrl, contactOk, japanesePhoneOk } from '../../supabase/functions/_shared/policy';
 import { el } from './dom';
 import { CAPTCHA_FAILED_MESSAGE, TURNSTILE_WAITING_MESSAGE, TURNSTILE_WIDGET_ERROR_MESSAGE, mountTurnstile, type TurnstileHandle } from './turnstile';
@@ -51,7 +52,7 @@ function showConsultSuccess(form: HTMLFormElement, shopName: string, contactName
   const success = el('div', { class: 'consult-success', role: 'status', 'aria-live': 'polite', tabindex: '-1' }, [
     el('h2', null, ['ご相談を受け付けました']),
     el('p', null, [`${shopName}（担当：${contactName}様）からの内容を受け付けました。`]),
-    el('p', null, ['内容を確認のうえ、通常3営業日以内に、ご記入のメールへご連絡します。自動返信メールは送りません。お店への訪問はありません。']),
+    el('p', null, ['内容を確認のうえ、通常【〇営業日】以内にメールで返信します。自動返信メールは送りません。訪問やビデオ通話はありません。']),
     el('a', { class: 'button', href: '/' }, ['トップへ']),
   ]);
   form.replaceChildren(success);
@@ -59,7 +60,7 @@ function showConsultSuccess(form: HTMLFormElement, shopName: string, contactName
   success.focus();
 }
 
-export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
+export function consultForm(supabaseUrl: string, anonKey: string, initialPlan?: string): HTMLElement {
   const summary = el('p', { class: 'error form-summary', role: 'alert' });
   summary.hidden = true;
   const shopName = field('お店の名前', '例：〇〇美容室', 80);
@@ -75,6 +76,11 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
   const phone = field('電話番号', '090-1234-5678', 40);
   const siteUrl = field('ホームページまたは予約ページのURL', 'https://example.com', 300);
   const plan = radios('希望プラン', PLANS, 'plan');
+  if (initialPlan && (PLANS as readonly string[]).includes(initialPlan)) {
+    for (const input of Array.from(plan.box.querySelectorAll('input'))) {
+      if (input instanceof HTMLInputElement && input.value === initialPlan) input.checked = true;
+    }
+  }
   const kind = radios('申込の種類', KINDS, 'kind');
   const questions = area('よく来る質問', '例：営業時間、駐車場、キャンセル方法', 2000);
   const referrer = field('紹介者の名前', '紹介してくれた方の名前', 80);
@@ -117,10 +123,9 @@ export function consultForm(supabaseUrl: string, anonKey: string): HTMLElement {
   const confirmStatus = el('p', { class: 'error form-summary', role: 'alert' });
   confirmStatus.hidden = true;
   const form = el('form', { class: 'stack consult-form', novalidate: 'true' }, [
-    el('p', null, ['必要事項を送ってください。この画面では決済しません。自動返信メールは送りません。お店への訪問はありません。']),
     el('p', null, [
-      'ご入力内容は、導入のご相談への回答と、ご契約の準備のために使います。取扱いは',
-      el('a', { href: '/privacy' }, ['プライバシーポリシー']),
+      `${CONSULT_INTRO}ご入力内容の取扱いは、`,
+      el('a', { href: '/privacy' }, ['個人情報の取り扱い']),
       'をご覧ください。',
     ]),
     fields,

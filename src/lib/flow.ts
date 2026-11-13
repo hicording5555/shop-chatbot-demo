@@ -71,8 +71,10 @@ export function start(plan: PlanId): { state: ChatState; bot: BotMessage } {
   };
 }
 
+const INDUSTRY_PICK_ORDER: Industry[] = ['salon', 'seitai', 'food'];
+
 export function industryButtons(): ChatButton[] {
-  return (Object.keys(INDUSTRY_LABEL) as Industry[]).map((industry) => ({
+  return INDUSTRY_PICK_ORDER.map((industry) => ({
     id: `industry:${industry}`,
     label: INDUSTRY_LABEL[industry],
   }));

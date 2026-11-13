@@ -1,34 +1,12 @@
 import type { Catalog, PlanId, Shop } from '../types';
 import { INDUSTRY_LABEL, PLAN_LABEL } from '../types';
 import { loadPublicCatalog } from '../data/api';
+import { planChoiceFromSearch } from '../content/service';
 import { createPublicClient } from '../lib/supabase';
 import { el } from './dom';
 import { chatSkeleton, mountChat } from './chat';
 import { consultForm } from './consult-form';
-
-const PLANS: { id: PlanId; price: string; monthly: string; audience: string; points: string[] }[] = [
-  {
-    id: 'light',
-    price: '初期 20,000円',
-    monthly: '月額 5,000円',
-    audience: 'まずはよくある質問に自動で答えたいお店に',
-    points: ['よくある質問にボタンと入力で自動回答', '答えられないときはお店の電話・メールをご案内'],
-  },
-  {
-    id: 'standard',
-    price: '初期 40,000円',
-    monthly: '月額 10,000円',
-    audience: '予約やメニュー案内まで任せたいお店向け',
-    points: ['ライトの内容すべて', 'メニュー・営業時間・アクセスをボタンでご案内', 'お使いの予約ページへご案内', '質問と答えをお店で自由に編集'],
-  },
-  {
-    id: 'full',
-    price: '初期 80,000円',
-    monthly: '月額 18,000円',
-    audience: '答えられない質問も、スタッフへつなぎたいお店に',
-    points: ['標準の内容すべて', '答えられない質問をスタッフへ引き継ぎ', '届いたお問い合わせを管理画面で一覧表示'],
-  },
-];
+import { pageShell } from './site-chrome';
 
 export function missingEnvView(missing: string[], serviceRole: boolean): HTMLElement {
   const items = missing.map((name) => el('li', null, [name]));
@@ -47,64 +25,22 @@ export function missingEnvView(missing: string[], serviceRole: boolean): HTMLEle
   ]);
 }
 
-export function landingView(): HTMLElement {
-  const cards = PLANS.map((plan) =>
-    el('article', { class: 'plan-card' }, [
-      el('h2', null, [PLAN_LABEL[plan.id]]),
-      el('p', { class: 'audience' }, plan.id === 'standard'
-        ? ['予約やメニュー案内まで', el('br', null), '任せたいお店向け']
-        : [plan.audience]),
-      el('p', { class: 'price' }, [plan.price]),
-      el('p', { class: 'price sub' }, [`${plan.monthly}（税別）`]),
-      el('ul', null, plan.points.map((point) => el('li', null, [point]))),
-      el('a', { class: 'button', href: `/demo/${plan.id}` }, ['デモを開く']),
-    ]),
-  );
-  return el('main', { class: 'sheet' }, [
-    siteHeader('/'),
-    el('section', { class: 'hero' }, [
-      el('p', { class: 'eyebrow' }, ['飲食店・美容室・整体院向け　ホームページ用チャット']),
-      el('h1', null, ['よくある質問への対応は、チャットにおまかせ。']),
-      el('p', { class: 'lede' }, [
-        '営業時間・メニュー・予約方法など、毎日のように聞かれる質問に、24時間ボタンひとつでお答えします。決まった答えだけを返すので、間違った案内をする心配がありません。下のデモで、飲食店・美容室・整体院の3業種をお試しください。',
-      ]),
-      el('div', { class: 'cta-row' }, [
-        el('a', { class: 'button', href: '/consult' }, ['相談・申し込み']),
-        el('a', { class: 'button ghost', href: '/demo/standard' }, ['デモを試す']),
-      ]),
-      el('p', { class: 'note' }, ['店名・住所・料金はすべて架空です。実在のお店とは関係ありません。']),
-    ]),
-    el('section', { class: 'plan-grid' }, cards),
-    el('section', { class: 'panel' }, [
-      el('h2', null, ['ホームページへの設置']),
-      el('p', null, ['お使いのホームページに、コードを1行貼るだけで設置できます。']),
-      el('div', { class: 'cta-row' }, [
-        el('a', { class: 'button', href: '/consult' }, ['導入について相談する']),
-      ]),
-    ]),
-  ]);
-}
-
-export function consultView(supabaseUrl: string, anonKey: string): HTMLElement {
-  return el('main', { class: 'sheet narrow' }, [
-    siteHeader('/consult'),
-    el('p', { class: 'eyebrow' }, ['相談・申し込み']),
+export function consultView(supabaseUrl: string, anonKey: string, search = ''): HTMLElement {
+  return pageShell('/consult', [
     el('h1', null, ['相談・申し込み']),
-    consultForm(supabaseUrl, anonKey),
+    consultForm(supabaseUrl, anonKey, planChoiceFromSearch(search)),
     el('p', null, [el('a', { class: 'button ghost', href: '/demo/standard' }, ['デモを試す'])]),
-  ]);
+  ], true);
 }
 
 export function privacyView(): HTMLElement {
-  return el('main', { class: 'sheet narrow' }, [
-    siteHeader('/privacy'),
-    el('p', { class: 'eyebrow' }, ['プライバシーポリシー']),
-    el('h1', null, ['個人情報の取扱い']),
-    el('p', null, ['事業者の氏名・住所：【運営者名】【住所】。この欄は未定です。']),
+  return pageShell('/privacy', [
+    el('h1', null, ['個人情報の取り扱い']),
+    el('p', null, ['事業者の氏名・住所：【未定】。']),
     el('h2', null, ['取得する情報']),
     el('p', null, ['相談・申し込みフォームに入力された店名、担当者名、メールアドレス、電話番号、URL、相談内容です。引き継ぎフォームでは、お名前、連絡先、質問内容を受け取ります。IPアドレスとブラウザ情報（User-Agent等）も受け取ります。これらは Supabase のアクセスログに記録され、ボットの確認のために Cloudflare Turnstile へ送られます。']),
     el('h2', null, ['利用目的']),
-    el('p', null, ['導入のご相談への回答と、ご契約の準備のためだけに使います。案内メールは、希望した人にだけ送ります。自動返信メールは送りません。']),
+    el('p', null, ['導入のご相談への回答と、ご契約の準備のためだけに使います。案内メールは、希望した人にだけ送ります。いまは自動返信メールは送りません。内容を確認のうえ、通常【〇営業日】以内にメールで返信します。']),
     el('h2', null, ['委託先']),
     el('p', null, ['データベースは Supabase、確認用のウィジェットは Cloudflare Turnstile、このサイトの配信は Render に委託しています。法令に基づく場合を除き、同意なく第三者へ提供しません。']),
     el('h2', null, ['国外での取り扱い']),
@@ -112,9 +48,9 @@ export function privacyView(): HTMLElement {
     el('h2', null, ['保管期間']),
     el('p', null, ['相談・申し込みは約90日で消します。スタッフへの引き継ぎは約7日で消します。IPをハッシュした回数の記録は最長で約2日で消します。']),
     el('h2', null, ['開示・訂正・削除の請求']),
-    el('p', null, ['開示、訂正、利用停止、削除のご請求は【連絡先メール】へ送ってください。この欄は未定です。']),
-    el('p', null, ['制定日：【日付】']),
-  ]);
+    el('p', null, ['開示、訂正、利用停止、削除のご請求は【未定】の連絡先へ送ってください。']),
+    el('p', null, ['制定日：【未定】。改定日：【未定】。']),
+  ], true);
 }
 
 export function notFoundView(): HTMLElement {
@@ -155,7 +91,7 @@ export function mountDemo(
   root.replaceChildren(
     widget
       ? skeletonHost
-      : el('main', { class: 'sheet demo-page' }, [siteHeader(planPath(plan)), el('div', { class: 'demo-layout' }, [el('section', { class: 'storefront' }, [el('p', null, ['チャットを準備しています…'])]), skeletonHost])]),
+      : pageShell(planPath(plan), [el('div', { class: 'wrap demo-wrap' }, [el('p', { class: 'note' }, ['このページの店名・住所・料金は架空です。実在のお店とは関係ありません。']), el('div', { class: 'demo-layout' }, [el('section', { class: 'storefront' }, [el('p', null, ['チャットを準備しています…'])]), skeletonHost])])]),
   );
   loadPublicCatalog(client)
     .then((catalog) => {
@@ -207,11 +143,12 @@ function widgetShop(catalog: Catalog, slug?: string): Shop | undefined {
 function demoLayout(plan: PlanId, catalog: Catalog, supabaseUrl: string, anonKey: string): HTMLElement {
   const heroTitle = el('h1', null, ['お店のホームページ（見本）']);
   const hours = el('p', { class: 'store-meta' }, ['チャットで業種を選ぶと、営業時間と住所がここに出ます。']);
-  const heroText = el('p', null, ['チャットで業種を選ぶと、そのお店のスタッフになったつもりでご案内します。まずは気になる業種を選んでみてください。']);
+  const heroText = el('p', null, ['店名・住所・料金は架空です。実在のお店とは関係ありません。チャットで業種を選ぶと、そのお店の案内に切り替わります。']);
   const chatHost = el('div', { class: 'chat-host' });
-  const page = el('main', { class: 'sheet demo-page' }, [
-    siteHeader(planPath(plan)),
-    el('div', { class: 'demo-layout' }, [
+  const page = pageShell(planPath(plan), [
+    el('div', { class: 'wrap demo-wrap' }, [
+      el('p', { class: 'note' }, ['このページの店名・住所・料金は架空です。実在のお店とは関係ありません。']),
+      el('div', { class: 'demo-layout' }, [
       el('section', { class: 'storefront' }, [
         el('p', { class: 'eyebrow' }, [`${PLAN_LABEL[plan]}プランの見本`]),
         heroTitle,
@@ -232,6 +169,7 @@ function demoLayout(plan: PlanId, catalog: Catalog, supabaseUrl: string, anonKey
       ]),
       chatHost,
     ]),
+    ]),
   ]);
   mountChat(chatHost, {
     plan,
@@ -245,8 +183,8 @@ function demoLayout(plan: PlanId, catalog: Catalog, supabaseUrl: string, anonKey
       heroTitle.textContent = shop?.name ?? 'お店のホームページ（見本）';
       hours.textContent = shop ? `${shop.hours}　定休日 ${shop.closedDays}　${shop.address}` : 'チャットで業種を選ぶと、営業時間と住所がここに出ます。';
       heroText.textContent = shop
-        ? `${INDUSTRY_LABEL[industry!]}の見本です。料金も住所も架空です。`
-        : 'チャットで業種を選ぶと、そのお店のスタッフになったつもりでご案内します。まずは気になる業種を選んでみてください。';
+        ? `${INDUSTRY_LABEL[industry!]}の見本です。店名・住所・料金は架空です。実在のお店とは関係ありません。`
+        : '店名・住所・料金は架空です。実在のお店とは関係ありません。チャットで業種を選ぶと、そのお店の案内に切り替わります。';
     },
   });
   return page;
@@ -291,8 +229,7 @@ function reserveView(shop: Shop | undefined): HTMLElement {
     note.hidden = false;
     note.textContent = 'これは見本ページです。予約は確定していません。実際の導入時は、ここにお店の予約ページ（ホットペッパーグルメなど）が開きます。';
   });
-  return el('main', { class: 'sheet narrow' }, [
-    siteHeader(''),
+  return pageShell('', [
     el('p', { class: 'eyebrow' }, ['ネット予約の見本']),
     el('h1', null, [name]),
     el('p', null, ['このページはデモです。送信しても予約は保存されず、お店には届きません。']),
@@ -301,27 +238,9 @@ function reserveView(shop: Shop | undefined): HTMLElement {
     form,
     note,
     el('p', null, [el('a', { href: '/demo/standard' }, ['チャットのデモへ戻る'])]),
-  ]);
+  ], true);
 }
 
 function planPath(plan: PlanId): string {
   return `/demo/${plan}`;
-}
-
-function siteHeader(current: string): HTMLElement {
-  const links: [string, string][] = [
-    ['/demo/light', 'ライト'],
-    ['/demo/standard', '標準'],
-    ['/demo/full', '充実'],
-    ['/admin', '管理'],
-  ];
-  return el('header', { class: 'site-header' }, [
-    el('a', { class: 'brand', href: '/' }, ['店ボット']),
-    el('nav', { class: 'nav' }, links.map(([href, label]) => {
-      const attrs: Record<string, string> = { href };
-      if (href === current) attrs['aria-current'] = 'page';
-      return el('a', attrs, [label]);
-    })),
-    el('span', { class: 'header-note' }, ['架空のデモ']),
-  ]);
 }

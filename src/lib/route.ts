@@ -2,6 +2,11 @@ import type { PlanId } from '../types';
 
 export type Route =
   | { name: 'landing' }
+  | { name: 'plans' }
+  | { name: 'flow' }
+  | { name: 'faq' }
+  | { name: 'legal' }
+  | { name: 'terms' }
   | { name: 'demo'; plan: PlanId }
   | { name: 'widget'; plan: PlanId; slug?: string }
   | { name: 'admin' }
@@ -15,8 +20,13 @@ const PLANS = new Set<PlanId>(['light', 'standard', 'full']);
 export function parseRoute(pathname: string): Route {
   const path = pathname.replace(/\/+$/, '') || '/';
   if (path === '/') return { name: 'landing' };
+  if (path === '/plans') return { name: 'plans' };
+  if (path === '/flow') return { name: 'flow' };
+  if (path === '/faq') return { name: 'faq' };
+  if (path === '/legal') return { name: 'legal' };
+  if (path === '/terms') return { name: 'terms' };
   if (path === '/admin') return { name: 'admin' };
-  if (path === '/consult') return { name: 'consult' };
+  if (path === '/consult' || path === '/apply') return { name: 'consult' };
   if (path === '/privacy') return { name: 'privacy' };
   const reserve = /^\/reserve\/([a-z0-9-]+)$/.exec(path);
   if (reserve) return { name: 'reserve', slug: reserve[1] };

@@ -198,6 +198,15 @@ describe('env and routes', () => {
     expect(parseRoute('/widget/full/')).toEqual({ name: 'widget', plan: 'full' });
     expect(parseRoute('/admin')).toEqual({ name: 'admin' });
     expect(parseRoute('/consult')).toEqual({ name: 'consult' });
+    expect(parseRoute('/apply')).toEqual({ name: 'consult' });
+    expect(parseRoute('/plans')).toEqual({ name: 'plans' });
+    expect(parseRoute('/flow')).toEqual({ name: 'flow' });
+    expect(parseRoute('/faq')).toEqual({ name: 'faq' });
+    expect(parseRoute('/legal')).toEqual({ name: 'legal' });
+    expect(parseRoute('/terms')).toEqual({ name: 'terms' });
+    expect(parseRoute('/pay').name).toBe('notfound');
+    expect(parseRoute('/pay/complete').name).toBe('notfound');
+    expect(parseRoute('/hearing').name).toBe('notfound');
     expect(parseRoute('/reserve/komorebi')).toEqual({ name: 'reserve', slug: 'komorebi' });
     expect(parseRoute('/missing').name).toBe('notfound');
   });

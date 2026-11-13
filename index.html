@@ -3,14 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="robots" content="noindex" />
-    <title>店ボット・デモ</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <title>お店のホームページで、よくある質問に答えます｜ARK</title>
     <style>
       html.admin-lock body { visibility: hidden !important; }
     </style>
     <script>
       (function () {
         var path = (location.pathname || '/').replace(/\/+$/, '') || '/';
+        var prefixes = ['/admin', '/widget', '/reserve', '/shop-demo'];
+        var hide = false;
+        for (var i = 0; i < prefixes.length; i++) {
+          var prefix = prefixes[i];
+          if (path === prefix || path.indexOf(prefix + '/') === 0) hide = true;
+        }
+        if (hide) {
+          var meta = document.createElement('meta');
+          meta.name = 'robots';
+          meta.content = 'noindex, nofollow';
+          document.head.appendChild(meta);
+        }
         if (path !== '/admin' && path.indexOf('/admin/') !== 0) return;
         document.documentElement.classList.add('admin-lock');
         var framed = false;
@@ -26,7 +40,7 @@
   </head>
   <body>
     <div id="app"></div>
-    <noscript>このデモはJavaScriptが必要です。</noscript>
+    <noscript>このページの表示にはJavaScriptが必要です。</noscript>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

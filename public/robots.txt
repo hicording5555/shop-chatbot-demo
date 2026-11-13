@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /admin
+Disallow: /widget
+Disallow: /reserve
+Disallow: /shop-demo

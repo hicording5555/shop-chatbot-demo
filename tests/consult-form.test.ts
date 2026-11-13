@@ -21,7 +21,8 @@ describe('consult form', () => {
     radio!.dispatchEvent(new Event('change'));
     expect((other?.closest('.field-wrap') as HTMLElement).hidden).toBe(false);
     expect(form.textContent).not.toContain('TimeRex');
-    expect(form.textContent).not.toContain('ビデオ通話');
+    expect(form.textContent).toContain('訪問やビデオ通話はありません');
+    expect(form.textContent).toContain('いまは自動返信メールは送りません');
   });
 
   it('confirms every field that will be sent, including optional ones', () => {

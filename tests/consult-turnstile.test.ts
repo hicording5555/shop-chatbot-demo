@@ -124,7 +124,8 @@ describe('consult turnstile', () => {
     const success = form.querySelector('.consult-success') as HTMLElement;
     expect(success.hidden).toBe(false);
     expect(success.textContent).toContain('ご相談を受け付けました');
-    expect(success.textContent).toContain('通常3営業日以内');
+    expect(success.textContent).toContain('通常【〇営業日】以内');
+    expect(success.textContent).toContain('自動返信メールは送りません');
     expect(success.getAttribute('role')).toBe('status');
     expect(hiddenAncestor(success)).toBe(false);
     expect(form.querySelector('button[type="submit"]')).toBeNull();

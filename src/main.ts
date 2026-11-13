@@ -3,7 +3,9 @@ import { readEnv } from './lib/env';
 import { enforceAdminFrame } from './lib/admin-frame';
 import { parseRoute } from './lib/route';
 import { mountAdmin, mountAdminFixture } from './ui/admin';
-import { consultView, landingView, missingEnvView, mountDemo, mountReserve, notFoundView, privacyView } from './ui/pages';
+import { consultView, missingEnvView, mountDemo, mountReserve, notFoundView, privacyView } from './ui/pages';
+import { faqView, flowView, landingView, legalView, plansView, termsView } from './ui/service-pages';
+import { applyDocumentPolicy, routeTitle } from './ui/site-chrome';
 import './styles.css';
 
 const app = document.querySelector<HTMLElement>('#app');
@@ -25,6 +27,8 @@ function framedAdminNotice(href: string): HTMLElement {
 
 function render(): void {
   if (!app) return;
+  const route = parseRoute(window.location.pathname);
+  applyDocumentPolicy(window.location.pathname, routeTitle(route.name));
   if (enforceAdminFrame(window.location.pathname, window) === 'deny') {
     const href = window.location.pathname + window.location.search + window.location.hash;
     app.replaceChildren(framedAdminNotice(href || '/admin'));
@@ -33,7 +37,6 @@ function render(): void {
   }
   document.documentElement.classList.remove('admin-lock');
   const env = readEnv();
-  const route = parseRoute(window.location.pathname);
   const fixture = import.meta.env.DEV && new URLSearchParams(window.location.search).has('fixture');
   document.body.classList.toggle('widget', route.name === 'widget');
   if (fixture && (route.name === 'demo' || route.name === 'widget' || route.name === 'admin')) {
@@ -68,12 +71,28 @@ function render(): void {
     });
     return;
   }
-  if (!env.ok) {
-    app!.replaceChildren(missingEnvView(env.missing, env.serviceRole));
-    return;
-  }
   if (route.name === 'landing') {
     app!.replaceChildren(landingView());
+    return;
+  }
+  if (route.name === 'plans') {
+    app!.replaceChildren(plansView());
+    return;
+  }
+  if (route.name === 'flow') {
+    app!.replaceChildren(flowView());
+    return;
+  }
+  if (route.name === 'faq') {
+    app!.replaceChildren(faqView());
+    return;
+  }
+  if (route.name === 'legal') {
+    app!.replaceChildren(legalView());
+    return;
+  }
+  if (route.name === 'terms') {
+    app!.replaceChildren(termsView());
     return;
   }
   if (route.name === 'notfound') {
@@ -81,11 +100,15 @@ function render(): void {
     return;
   }
   if (route.name === 'consult') {
-    app.replaceChildren(consultView(env.url, env.anonKey));
+    app.replaceChildren(consultView(env.ok ? env.url : '', env.ok ? env.anonKey : '', window.location.search));
     return;
   }
   if (route.name === 'privacy') {
     app.replaceChildren(privacyView());
+    return;
+  }
+  if (!env.ok) {
+    app!.replaceChildren(missingEnvView(env.missing, env.serviceRole));
     return;
   }
   if (route.name === 'reserve') {
@@ -109,9 +132,17 @@ document.addEventListener('click', (event) => {
   const linkTarget = link.getAttribute('target');
   if (linkTarget === '_blank' || linkTarget === '_top') return;
   event.preventDefault();
-  window.history.pushState({}, '', href);
+  const url = new URL(href, window.location.href);
+  window.history.pushState({}, '', `${url.pathname}${url.search}${url.hash}`);
   render();
+  const id = url.hash.replace(/^#/, '');
+  if (id) document.getElementById(id)?.scrollIntoView();
+  else window.scrollTo(0, 0);
 });
 
-window.addEventListener('popstate', render);
+window.addEventListener('popstate', () => {
+  render();
+  const id = window.location.hash.replace(/^#/, '');
+  if (id) document.getElementById(id)?.scrollIntoView();
+});
 render();
