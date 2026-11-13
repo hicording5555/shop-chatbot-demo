@@ -1,0 +1,26 @@
+{
+  "name": "shop-chatbot-demo",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 4173",
+    "test": "vitest run && vite-node scripts/scan-secrets.mjs && node scripts/check-rls.mjs",
+    "test:rls": "node scripts/check-rls.mjs",
+    "seed:sql": "vite-node scripts/write-seed.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.86.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.3.14",
+    "@types/node": "^26.6.6",
+    "happy-dom": "^21.0.4",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.1",
+    "vite-node": "^6.0.0",
+    "vitest": "5.1.0"
+  }
+}
