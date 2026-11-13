@@ -43,7 +43,7 @@ interface MenuRow {
   sort_order: number;
 }
 
-const INDUSTRY_ORDER: Industry[] = ['food', 'salon', 'seitai'];
+const INDUSTRY_ORDER: Industry[] = ['salon', 'seitai', 'food'];
 
 export function mapShop(row: ShopRow): Shop {
   return {

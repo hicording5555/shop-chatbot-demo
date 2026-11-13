@@ -27,6 +27,7 @@ function framedAdminNotice(href: string): HTMLElement {
 
 function render(): void {
   if (!app) return;
+  renderedKey = documentKey();
   const route = parseRoute(window.location.pathname);
   applyDocumentPolicy(window.location.pathname, routeTitle(route.name));
   if (enforceAdminFrame(window.location.pathname, window) === 'deny') {
@@ -122,27 +123,62 @@ function render(): void {
   mountDemo(app!, route.plan, env.url, env.anonKey, route.name === 'widget', undefined, route.name === 'widget' ? route.slug : undefined);
 }
 
+function documentKey(): string {
+  return `${window.location.pathname}${window.location.search}`;
+}
+
+let renderedKey = '';
+
+function focusMain(): void {
+  const main = document.getElementById('main');
+  if (!(main instanceof HTMLElement)) return;
+  main.focus();
+}
+
+function scrollToCurrentHash(): void {
+  const id = window.location.hash.replace(/^#/, '');
+  if (!id) {
+    window.scrollTo(0, 0);
+    return;
+  }
+  const node = document.getElementById(id);
+  node?.scrollIntoView();
+  if (id === 'main') focusMain();
+}
+
 document.addEventListener('click', (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
   const link = target.closest('a');
   if (!link) return;
   const href = link.getAttribute('href');
-  if (!href || !href.startsWith('/') || href.startsWith('//')) return;
+  if (!href || href.startsWith('//')) return;
   const linkTarget = link.getAttribute('target');
   if (linkTarget === '_blank' || linkTarget === '_top') return;
-  event.preventDefault();
+  if (href.startsWith('#')) {
+    if (href === '#main') window.setTimeout(focusMain, 0);
+    return;
+  }
+  if (!href.startsWith('/')) return;
   const url = new URL(href, window.location.href);
+  const samePage = url.pathname === window.location.pathname && url.search === window.location.search;
+  if (samePage) {
+    if (url.hash === '#main') window.setTimeout(focusMain, 0);
+    return;
+  }
+  event.preventDefault();
   window.history.pushState({}, '', `${url.pathname}${url.search}${url.hash}`);
   render();
-  const id = url.hash.replace(/^#/, '');
-  if (id) document.getElementById(id)?.scrollIntoView();
-  else window.scrollTo(0, 0);
+  scrollToCurrentHash();
 });
 
 window.addEventListener('popstate', () => {
+  const nextKey = documentKey();
+  if (nextKey === renderedKey) {
+    scrollToCurrentHash();
+    return;
+  }
   render();
-  const id = window.location.hash.replace(/^#/, '');
-  if (id) document.getElementById(id)?.scrollIntoView();
+  scrollToCurrentHash();
 });
 render();

@@ -2,10 +2,10 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { demoFaqs, demoMenu, demoShops } from '../src/data/demo-seed';
-import { DEMO_INDUSTRIES, SERVICE_PLANS, yen } from '../src/content/service';
+import { CONTRACT_MONTHS, DELIVERY_DAYS, DEMO_INDUSTRIES, REPLY_WINDOW, SERVICE_PLANS, UNDECIDED, yen } from '../src/content/service';
 import { corporateAiChatbot, corporateHome } from '../src/lib/corporate';
 import { parseRoute } from '../src/lib/route';
-import { NOINDEX_PREFIXES, shouldNoindex } from '../src/lib/robots';
+import { allowsIndex, shouldNoindex } from '../src/lib/robots';
 import { mountDemo } from '../src/ui/pages';
 import { consultView } from '../src/ui/pages';
 import { faqView, flowView, landingView, legalView, plansView, termsView } from '../src/ui/service-pages';
@@ -42,8 +42,8 @@ describe('signup site', () => {
     expect(headings).toEqual([
       'お店のホームページで、よくある質問に答えます',
       '同じ質問が、くり返し届くことがあります',
-      '3つのプランから選べます',
-      '実際に触って、動きを確かめてください',
+      'ライト・標準・充実の3プランです',
+      '下のチャットに、質問を入れてみてください',
       '相談から導入までの流れ',
       'よくある質問',
       '相談も、Webだけで進められます',
@@ -63,13 +63,19 @@ describe('signup site', () => {
     }
     expect(view.querySelectorAll('a[aria-label="ARK ホーム"]')).toHaveLength(2);
     for (const plan of SERVICE_PLANS) {
-      expect(plan.initialTaxIn).toBe(Math.round(plan.initialTaxEx * 1.1));
       expect(plan.monthlyTaxIn).toBe(Math.round(plan.monthlyTaxEx * 1.1));
-      expect(view.textContent).toContain(`${yen(plan.initialTaxIn)}（税込）`);
-      expect(view.textContent).toContain(`税別 ${yen(plan.initialTaxEx)}`);
-      expect(view.textContent).toContain(`${yen(plan.monthlyTaxIn)}（税込）`);
+      expect(plan.termTotalTaxIn).toBe(plan.monthlyTaxIn * CONTRACT_MONTHS);
+      expect(view.textContent).toContain(`月額 ${yen(plan.monthlyTaxIn)}（税込）`);
       expect(view.textContent).toContain(`税別 ${yen(plan.monthlyTaxEx)}`);
+      expect(view.textContent).toContain(`12か月の合計 ${yen(plan.termTotalTaxIn)}（税込）`);
     }
+    expect(view.textContent).toContain('初期費用なし（設置・基本設定込み）');
+    expect(view.textContent).not.toContain('月1回まで無料です');
+    expect(view.textContent).not.toContain('残り回数を表示します');
+    expect(view.textContent).not.toContain('3つのプランから選べ');
+    expect(view.textContent).not.toContain('実際に触って');
+    expect(view.textContent).not.toContain('向いている相手');
+    expect(view.textContent).not.toContain('モニター');
     expect(view.textContent).toContain('デモで最初に表示するプラン');
     expect(view.textContent).not.toContain('おすすめ');
     const frames = view.querySelectorAll('iframe');
@@ -82,10 +88,9 @@ describe('signup site', () => {
     expect(frames[0]?.parentElement?.contains(expand)).toBe(false);
     expect(view.textContent).toContain('実在のお店とは関係ありません');
     expect(view.textContent).toContain('いまは未実装です');
-    expect(view.textContent).toContain('【〇営業日】');
-    expect(view.textContent).toContain('【　】');
+    expect(view.textContent).toContain(REPLY_WINDOW);
     const nav = Array.from(view.querySelectorAll('.nav a')).map((node) => node.getAttribute('href'));
-    expect(nav).toEqual(['/', '/plans', '/flow', '/faq']);
+    expect(nav).toEqual(['/', '/plans', '/flow', '/faq', '/consult']);
     expect(view.querySelector('a[href="/admin"]')).toBeNull();
     expect(view.querySelector('a[href="/pay"]')).toBeNull();
     expect(view.querySelector('a[href^="/widget/"]')).toBeNull();
@@ -109,30 +114,37 @@ describe('signup site', () => {
     expect(view.querySelectorAll('iframe')).toHaveLength(1);
     expect(frame?.getAttribute('src')).toBe('/widget/full/komorebi');
     expect(view.querySelector('.demo-expand')?.getAttribute('href')).toBe('/demo/full');
+    food.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    expect(frame?.getAttribute('src')).toBe('/widget/full/yasuragi');
+    expect(food.getAttribute('aria-selected')).toBe('false');
   });
 
   it('states current limits on plans, flow, faq, legal, and terms', () => {
     const plans = plansView();
     expect(plans.querySelector('h1')?.textContent).toBe('プランと料金');
     expect(plans.textContent).toContain('相談フォームの送信では決済しません');
-    expect(plans.textContent).toContain('実績づくりのためのモニター（店数・期間は【　】）');
+    expect(plans.textContent).toContain('129,360円');
+    expect(plans.textContent).toContain('261,360円');
+    expect(plans.textContent).toContain('393,360円');
     expect(plans.textContent).not.toContain('通常価格');
+    expect(plans.textContent).not.toContain('モニター');
     const flow = flowView();
     expect(flow.textContent).toContain('いまの手順');
     expect(flow.textContent).toContain('今後の予定（いまは未実装です）');
-    expect(flow.textContent).toContain('納期は【　】日');
+    expect(flow.textContent).toContain(`納期は${DELIVERY_DAYS}日`);
     expect(flow.textContent).toContain('自動返信メールは送りません');
     const faq = faqView();
     expect(faq.textContent).toContain('予約はチャットで取れますか');
     expect(faq.textContent).toContain('ボットの中では確定しません');
     expect(faq.textContent).toContain('いまは自動返信メールは送りません');
-    expect(faq.textContent).toContain('【解約の期限と方法を記入】');
+    expect(faq.textContent).toContain('残りの月数の料金');
     expect(faq.textContent).toContain('診断や効果の約束は入れません');
     expect(faq.textContent).toContain('今回のフォームでは決済しません');
+    expect(faq.textContent).not.toContain('残り回数を表示します');
     const legal = legalView();
     expect(legal.textContent).toContain('特定商取引法に基づく表記');
-    expect(legal.textContent).toContain('訪問販売としては構成しません');
-    expect(legal.textContent).toContain('【未定】');
+    expect(legal.textContent).toContain('残りの月数の料金');
+    expect(legal.textContent).toContain(UNDECIDED);
     expect(legal.textContent).not.toContain('A案');
     expect(legal.textContent).not.toContain('B案');
     const terms = termsView();
@@ -143,8 +155,8 @@ describe('signup site', () => {
     const privacy = privacyView();
     expect(privacy.querySelector('h1')?.textContent).toBe('個人情報の取り扱い');
     expect(privacy.textContent).toContain('いまは自動返信メールは送りません');
-    expect(privacy.textContent).toContain('通常【〇営業日】以内');
-    expect(privacy.textContent).toContain('制定日：【未定】');
+    expect(privacy.textContent).toContain(REPLY_WINDOW);
+    expect(privacy.textContent).toContain(`制定日：${UNDECIDED}`);
     const blob = [plans, flow, faq, legal, terms, privacy].map((node) => node.textContent).join('\n');
     for (const phrase of BANNED) expect(blob).not.toContain(phrase);
   });
@@ -154,7 +166,7 @@ describe('signup site', () => {
     expect(view.querySelector('h1')?.textContent).toBe('相談・申し込み');
     expect(view.textContent).toContain('ない場合は空欄でも構いません');
     expect(view.textContent).toContain('いまは自動返信メールは送りません');
-    expect(view.textContent).toContain('通常【〇営業日】以内');
+    expect(view.textContent).toContain(REPLY_WINDOW);
     const checked = view.querySelector<HTMLInputElement>('input[name="plan"]:checked');
     expect(checked?.value).toBe('標準');
     const newsletter = Array.from(view.querySelectorAll('label')).find((label) => label.textContent?.includes('今後の案内メールを希望する'));
@@ -173,25 +185,31 @@ describe('signup site', () => {
     expect(root.querySelector('a[href="/admin"]')).toBeNull();
   });
 
-  it('noindexes admin, widget, reserve, and future shop demos only', () => {
-    for (const path of ['/admin', '/admin/settings', '/widget', '/widget/full', '/widget/full/komorebi', '/reserve', '/reserve/komorebi', '/shop-demo', '/shop-demo/lumiere']) {
-      expect(shouldNoindex(path)).toBe(true);
+  it('keeps every page noindex until publishing is explicitly opened', () => {
+    expect(allowsIndex()).toBe(false);
+    expect(allowsIndex('1')).toBe(true);
+    expect(shouldNoindex('/')).toBe(true);
+    expect(shouldNoindex('/', true)).toBe(false);
+    for (const path of ['/admin', '/admin/settings', '/widget/full', '/widget/full/komorebi', '/reserve/komorebi', '/shop-demo', '/shop-demo/lumiere', '/nonexistent', '/sitemap.xml']) {
+      expect(shouldNoindex(path, true)).toBe(true);
     }
     for (const path of ['/', '/plans', '/flow', '/faq', '/consult', '/apply', '/privacy', '/legal', '/terms', '/demo/light', '/demo/standard', '/demo/full']) {
-      expect(shouldNoindex(path)).toBe(false);
+      expect(shouldNoindex(path, true)).toBe(false);
       expect(parseRoute(path).name).not.toBe('notfound');
     }
-    expect(shouldNoindex('/admin-login')).toBe(false);
     const html = readFileSync('index.html', 'utf8');
-    expect(html).not.toMatch(/<meta\s+name="robots"\s+content="noindex"\s*\/?>/);
-    expect(html).toContain("meta.content = 'noindex, nofollow'");
-    for (const prefix of NOINDEX_PREFIXES) expect(html).toContain(`'${prefix}'`);
+    expect(html).toMatch(/<meta\s+name="robots"\s+content="noindex,\s*nofollow"\s*\/>/);
+    expect(html).toContain('name="description"');
+    expect(html).toContain('property="og:title"');
+    expect(html).toContain('property="og:image"');
     const robots = readFileSync('public/robots.txt', 'utf8');
-    for (const prefix of NOINDEX_PREFIXES) expect(robots).toContain(`Disallow: ${prefix}`);
-    applyDocumentPolicy('/widget/standard', 'チャット｜ARK');
+    expect(robots).not.toContain('Disallow:');
+    applyDocumentPolicy('/widget/standard', 'チャット｜ARK', true);
     expect(document.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe('noindex, nofollow');
-    applyDocumentPolicy('/plans', 'プランと料金｜ARK');
+    applyDocumentPolicy('/plans', 'プランと料金｜ARK', true);
     expect(document.querySelector('meta[name="robots"]')).toBeNull();
+    applyDocumentPolicy('/plans', 'プランと料金｜ARK', false);
+    expect(document.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe('noindex, nofollow');
   });
 
   it('does not add payment or mail packages', () => {
@@ -205,12 +223,10 @@ describe('signup site', () => {
     expect(css).toContain('Noto Sans JP');
     expect(css).not.toMatch(/fonts\.google|montserrat/i);
     const logo = readFileSync('public/brand/ark-logo.webp');
-    const mark = readFileSync('public/brand/ark-mark.webp');
-    for (const file of [logo, mark]) {
-      expect(file.subarray(0, 4).toString()).toBe('RIFF');
-      expect(file.subarray(8, 12).toString()).toBe('WEBP');
-      expect(file.length).toBeLessThan(80_000);
-    }
+    expect(logo.subarray(0, 4).toString()).toBe('RIFF');
+    expect(logo.subarray(8, 12).toString()).toBe('WEBP');
+    expect(logo.length).toBeLessThan(80_000);
+    expect(() => readFileSync('public/brand/ark-mark.webp')).toThrow();
     expect(readFileSync('public/favicon-32.png').length).toBeGreaterThan(0);
     expect(readFileSync('index.html', 'utf8')).toContain('href="/favicon-32.png"');
     expect(css).toContain('.masthead');

@@ -3,21 +3,28 @@ import { PLAN_LABEL } from '../types';
 import {
   CAN,
   CANNOT,
+  CONTRACT_NOTE,
+  DELIVERY_DAYS,
   DEMO_INDUSTRIES,
   DEMO_PLAN_ID,
   FACTS,
   FAQ_ITEMS,
   FICTIONAL_SHOP,
+  FUTURE_CHANGES,
   HERO_BODY,
   HERO_EYEBROW,
+  HERO_NOTES,
   HERO_TITLE,
+  INITIAL_FEE_NOTE,
   LEGAL_ITEMS,
-  MONITOR_NOTE,
   NOT_INCLUDED,
   PRICE_INTRO,
+  REPLY_WINDOW,
   SERVICE_PLANS,
   TERMS_HEADINGS,
   TOP_FAQ,
+  UNDECIDED,
+  priceListText,
   widgetPath,
   yen,
   type ServicePlan,
@@ -46,7 +53,7 @@ export function plansView(): HTMLElement {
     plansSection(false),
     el('div', { class: 'wrap' }, [
       el('div', { class: 'cta-row' }, [
-        el('a', { class: 'button', href: '/consult' }, ['Webから相談する']),
+        el('a', { class: 'button', href: '/consult' }, ['相談・申し込み']),
         el('a', { class: 'button ghost', href: '/flow' }, ['導入の流れ']),
         el('a', { class: 'button ghost', href: '/#demo' }, ['デモを試す']),
       ]),
@@ -63,18 +70,18 @@ export function flowView(): HTMLElement {
       el('ol', { class: 'steps' }, [
         el('li', null, ['デモやよくある質問で、動きを見る。店の名前や料金は架空です。']),
         el('li', null, ['相談・申し込みフォームを送る。この送信では決済しません。自動返信メールは送りません。']),
-        el('li', null, ['内容を確認のうえ、通常【〇営業日】以内にメールで返信します。訪問やビデオ通話はありません。']),
+        el('li', null, [`内容を確認のうえ、${REPLY_WINDOW}にメールで返信します。訪問やビデオ通話はありません。`]),
       ]),
       el('h2', null, ['今後の予定（いまは未実装です）']),
       el('p', null, ['ここから先は、まだこのサイトにはありません。']),
       el('ol', { class: 'steps' }, [
         el('li', null, ['フォーム送信後の自動返信（料金・規約）。']),
         el('li', null, ['利用規約に同意のうえ、最終確認画面から Stripe で初期費用と月額を支払う。']),
-        el('li', null, ['支払い確認後、設置案内をメールまたは共有ページで渡す。訪問しての設定はしません。納期は【　】日。']),
-        el('li', null, ['設置後の修正は、管理画面のフォームで受け付けます。月1回まで無料です。']),
+        el('li', null, [`支払い確認後、設置案内をメールまたは共有ページで渡す。訪問しての設定はしません。納期は${DELIVERY_DAYS}日。`]),
+        el('li', null, [FUTURE_CHANGES]),
       ]),
       el('div', { class: 'cta-row' }, [
-        el('a', { class: 'button', href: '/consult' }, ['Webから相談する']),
+        el('a', { class: 'button', href: '/consult' }, ['相談・申し込み']),
       ]),
     ]),
   ]);
@@ -91,7 +98,7 @@ export function faqView(): HTMLElement {
         el('p', null, faqAnswer(item.question, item.answer)),
       ]))),
       el('div', { class: 'cta-row' }, [
-        el('a', { class: 'button', href: '/consult' }, ['Webから相談する']),
+        el('a', { class: 'button', href: '/consult' }, ['相談・申し込み']),
       ]),
     ]),
   ]);
@@ -101,11 +108,10 @@ export function legalView(): HTMLElement {
   return pageShell('/legal', [
     el('div', { class: 'wrap page-intro narrow-copy' }, [
       el('h1', null, ['特定商取引法に基づく表記']),
-      el('p', null, ['通信販売の表示として、次の項目を置きます。内容は準備中です。']),
-      el('p', null, ['訪問販売としては構成しません。']),
-      el('dl', { class: 'blank-list' }, LEGAL_ITEMS.flatMap((label) => [
-        el('dt', null, [label]),
-        el('dd', null, ['【未定】']),
+      el('p', null, ['通信販売の表示として、次の項目を置きます。空欄は準備中です。']),
+      el('dl', { class: 'blank-list' }, LEGAL_ITEMS.flatMap((item) => [
+        el('dt', null, [item.label]),
+        el('dd', null, [item.label === '役務の対価' ? priceListText() : item.value]),
       ])),
     ]),
   ], true);
@@ -115,12 +121,11 @@ export function termsView(): HTMLElement {
   return pageShell('/terms', [
     el('div', { class: 'wrap page-intro narrow-copy' }, [
       el('h1', null, ['利用規約']),
-      el('p', null, ['要点の見出しだけを置いています。本文は【未定】です。']),
-      el('p', null, ['相談・申し込みフォームの送信だけでは、契約は成立しません。支払いの画面は未実装です。']),
-      ...TERMS_HEADINGS.flatMap((heading) => [
+      el('p', null, ['決まっていることだけを書き、残りは【未定】です。']),
+      ...TERMS_HEADINGS.map((heading) => el('section', null, [
         el('h2', null, [heading]),
-        el('p', null, ['【未定】']),
-      ]),
+        el('p', null, [termsBody(heading)]),
+      ])),
     ]),
   ], true);
 }
@@ -131,6 +136,7 @@ function hero(): HTMLElement {
       el('p', { class: 'eyebrow' }, [HERO_EYEBROW]),
       el('h1', null, [HERO_TITLE]),
       el('p', { class: 'lede' }, [HERO_BODY]),
+      el('ul', { class: 'hero-notes' }, HERO_NOTES.map((note) => el('li', null, [note]))),
       el('ul', { class: 'facts' }, FACTS.map((fact) => el('li', null, [fact]))),
       el('div', { class: 'cta-row' }, [
         el('a', { class: 'button', href: '/consult' }, ['相談・申し込み']),
@@ -144,7 +150,7 @@ function scopeSection(): HTMLElement {
   return el('section', { class: 'block', id: 'scope' }, [
     el('div', { class: 'wrap' }, [
       el('h2', null, ['同じ質問が、くり返し届くことがあります']),
-      el('p', null, ['営業時間、料金、予約の方法、駐車場など、予約の前によく聞かれることがあります。チャットは、公開情報をもとに案内するためのものです。電話の代わりになるとは言いません。']),
+      el('p', null, ['営業時間、料金、予約の方法、駐車場など、予約の前によく聞かれることがあります。チャットは、公開情報をもとに案内するためのものです。電話の代わりではありません。']),
       el('div', { class: 'split' }, [
         el('div', { class: 'panel' }, [
           el('h3', null, ['できること']),
@@ -155,6 +161,8 @@ function scopeSection(): HTMLElement {
           el('ul', null, CANNOT.map((item) => el('li', null, [item]))),
         ]),
       ]),
+      el('h3', null, ['今後の予定（いまは未実装です）']),
+      el('p', null, [FUTURE_CHANGES]),
     ]),
   ]);
 }
@@ -164,14 +172,14 @@ function plansSection(onHome: boolean): HTMLElement {
     el('div', { class: 'wrap' }, [
       ...(onHome
         ? [
-          el('h2', null, ['3つのプランから選べます']),
+          el('h2', null, ['ライト・標準・充実の3プランです']),
           el('p', null, [PRICE_INTRO]),
         ]
         : []),
       el('div', { class: 'plan-grid' }, SERVICE_PLANS.map((plan) => planCard(plan))),
       el('div', { class: 'compare-scroll' }, [compareTable()]),
       el('p', null, [`含まれないもの：${NOT_INCLUDED.join('、')}。`]),
-      el('p', null, [MONITOR_NOTE]),
+      el('p', null, [CONTRACT_NOTE]),
       ...(onHome
         ? [el('div', { class: 'cta-row' }, [el('a', { class: 'button ghost', href: '/plans' }, ['プランの詳細'])])]
         : []),
@@ -185,10 +193,10 @@ function planCard(plan: ServicePlan): HTMLElement {
     el('h3', null, [plan.name]),
     ...(demoDefault ? [el('p', { class: 'plan-flag' }, ['デモで最初に表示するプラン'])] : []),
     el('p', { class: 'audience' }, [plan.audience]),
-    el('p', { class: 'price' }, [`初期 ${yen(plan.initialTaxIn)}（税込）`]),
-    el('p', { class: 'price-note' }, [`税別 ${yen(plan.initialTaxEx)}`]),
+    el('p', null, [INITIAL_FEE_NOTE]),
     el('p', { class: 'price' }, [`月額 ${yen(plan.monthlyTaxIn)}（税込）`]),
     el('p', { class: 'price-note' }, [`税別 ${yen(plan.monthlyTaxEx)}`]),
+    el('p', { class: 'price' }, [`12か月の合計 ${yen(plan.termTotalTaxIn)}（税込）`]),
     el('p', null, [plan.summary]),
     el('ul', null, plan.features.map((feature) => el('li', null, [feature]))),
     el('a', { class: 'button', href: `/consult?plan=${plan.id}` }, ['このプランで相談する']),
@@ -201,12 +209,12 @@ function compareTable(): HTMLElement {
     ...SERVICE_PLANS.map((plan) => el('th', { scope: 'col' }, [plan.name])),
   ]);
   const rows: [string, (plan: ServicePlan) => string][] = [
-    ['向いている相手', (plan) => plan.audience],
+    ['向いているお店', (plan) => plan.audience],
     ['できること', (plan) => plan.summary],
-    ['初期費用（税込）', (plan) => yen(plan.initialTaxIn)],
-    ['初期費用（税別）', (plan) => yen(plan.initialTaxEx)],
+    ['初期費用', () => INITIAL_FEE_NOTE],
     ['月額（税込）', (plan) => yen(plan.monthlyTaxIn)],
     ['月額（税別）', (plan) => yen(plan.monthlyTaxEx)],
+    ['12か月の合計（税込）', (plan) => yen(plan.termTotalTaxIn)],
   ];
   return el('table', { class: 'compare' }, [
     el('thead', null, [head]),
@@ -227,44 +235,37 @@ function demoSection(): HTMLElement {
     loading: 'lazy',
   }) as HTMLIFrameElement;
   const expand = el('a', { class: 'demo-expand', href: `/demo/${plan}` }, ['別ページで大きく見る']);
-  const industryTabs = DEMO_INDUSTRIES.map((item) => el('button', {
-    type: 'button',
-    class: 'tab',
-    role: 'tab',
-    'aria-selected': item.id === industry.id ? 'true' : 'false',
-  }, [item.label]) as HTMLButtonElement);
-  const planTabs = (['light', 'standard', 'full'] as PlanId[]).map((id) => el('button', {
-    type: 'button',
-    class: 'tab',
-    role: 'tab',
-    'aria-selected': id === plan ? 'true' : 'false',
-  }, [PLAN_LABEL[id]]) as HTMLButtonElement);
+  const industryTabs = DEMO_INDUSTRIES.map((item, index) => tabButton(`demo-industry-${index}`, item.label, item.id === industry.id));
+  const planIds: PlanId[] = ['light', 'standard', 'full'];
+  const planTabs = planIds.map((id, index) => tabButton(`demo-plan-${index}`, PLAN_LABEL[id], id === plan));
+  const panel = el('div', {
+    id: 'demo-panel',
+    class: 'demo-stage',
+    role: 'tabpanel',
+    'aria-labelledby': 'demo-industry-0',
+  }, [frame]);
   function sync(): void {
     frame.src = widgetPath(plan, industry.slug);
     frame.title = `架空の店のチャット（${PLAN_LABEL[plan]}）`;
     expand.href = `/demo/${plan}`;
+    const selected = industryTabs.find((tab) => tab.getAttribute('aria-selected') === 'true');
+    if (selected) panel.setAttribute('aria-labelledby', selected.id);
   }
-  industryTabs.forEach((button, index) => {
-    button.addEventListener('click', () => {
-      industry = DEMO_INDUSTRIES[index];
-      for (const tab of industryTabs) tab.setAttribute('aria-selected', tab === button ? 'true' : 'false');
-      sync();
-    });
+  wireTabs(industryTabs, (index) => {
+    industry = DEMO_INDUSTRIES[index];
+    sync();
   });
-  planTabs.forEach((button, index) => {
-    button.addEventListener('click', () => {
-      plan = (['light', 'standard', 'full'] as PlanId[])[index];
-      for (const tab of planTabs) tab.setAttribute('aria-selected', tab === button ? 'true' : 'false');
-      sync();
-    });
+  wireTabs(planTabs, (index) => {
+    plan = planIds[index];
+    sync();
   });
   return el('section', { class: 'block demo-block', id: 'demo' }, [
     el('div', { class: 'wrap' }, [
-      el('h2', null, ['実際に触って、動きを確かめてください']),
+      el('h2', null, ['下のチャットに、質問を入れてみてください']),
       el('p', null, [`${FICTIONAL_SHOP}業種とプランを切り替えて試せます。予約は既存の予約ページへ案内するだけで、ボットの中では確定しません。`]),
       el('div', { class: 'tablist', role: 'tablist', 'aria-label': '業種' }, industryTabs),
       el('div', { class: 'tablist', role: 'tablist', 'aria-label': 'プラン' }, planTabs),
-      el('div', { class: 'demo-stage' }, [frame]),
+      panel,
       el('p', { class: 'demo-expand-row' }, [expand]),
       el('p', { class: 'note' }, [`${FICTIONAL_SHOP}実在のお店の画面ではありません。`]),
     ]),
@@ -279,11 +280,11 @@ function flowSummary(): HTMLElement {
       el('ol', { class: 'steps' }, [
         el('li', null, ['このページのデモやFAQで動きを見る']),
         el('li', null, ['相談・申し込みフォームを送る（決済しない。自動返信メールは送らない）']),
-        el('li', null, ['通常【〇営業日】以内にメールで返信する。訪問やビデオ通話はない。']),
+        el('li', null, [`${REPLY_WINDOW}にメールで返信する。訪問やビデオ通話はない。`]),
       ]),
       el('h3', null, ['今後の予定（いまは未実装です）']),
-      el('p', null, ['フォーム送信後の自動返信（料金・規約）、利用規約に同意のうえ最終確認画面から Stripe で初期費用と月額を支払うこと、支払い確認後の設置案内。']),
-      el('p', null, ['設置後の修正は、管理画面のフォームで、月1回まで無料です。']),
+      el('p', null, ['フォーム送信後の自動返信（料金・規約）、利用規約に同意のうえ最終確認画面から Stripe で月額を支払うこと、支払い確認後の設置案内。']),
+      el('p', null, [FUTURE_CHANGES]),
       el('div', { class: 'cta-row' }, [
         el('a', { class: 'button ghost', href: '/flow' }, ['詳しい流れ']),
         el('a', { class: 'button', href: '/consult' }, ['相談・申し込み']),
@@ -302,6 +303,51 @@ function faqSummary(): HTMLElement {
       ]),
     ]),
   ]);
+}
+
+function termsBody(heading: string): string {
+  if (heading.startsWith('契約の成立')) return '相談・申し込みフォームの送信だけでは、契約は成立しません。支払いの画面は未実装です。成立の細目は【未定】です。';
+  if (heading.startsWith('料金と継続課金')) return `${CONTRACT_NOTE}${INITIAL_FEE_NOTE}。`;
+  if (heading === '解約') return '期間の途中で解約する場合も、残りの月数の料金をお支払いいただきます。手続きの期限と方法は【未定】です。自動更新は【未定】です。解約後はチャットを停止します。';
+  return UNDECIDED;
+}
+
+function tabButton(id: string, label: string, selected: boolean): HTMLButtonElement {
+  const button = el('button', {
+    id,
+    type: 'button',
+    class: 'tab',
+    role: 'tab',
+    'aria-selected': selected ? 'true' : 'false',
+    'aria-controls': 'demo-panel',
+    tabindex: selected ? '0' : '-1',
+  }, [label]) as HTMLButtonElement;
+  return button;
+}
+
+function wireTabs(tabs: HTMLButtonElement[], onPick: (index: number) => void): void {
+  const choose = (index: number, focus: boolean) => {
+    const next = (index + tabs.length) % tabs.length;
+    tabs.forEach((tab, item) => {
+      const on = item === next;
+      tab.setAttribute('aria-selected', on ? 'true' : 'false');
+      tab.tabIndex = on ? 0 : -1;
+    });
+    onPick(next);
+    if (focus) tabs[next].focus();
+  };
+  tabs.forEach((tab, index) => {
+    tab.addEventListener('click', () => choose(index, false));
+    tab.addEventListener('keydown', (event) => {
+      const key = event.key;
+      if (key !== 'ArrowRight' && key !== 'ArrowLeft' && key !== 'Home' && key !== 'End') return;
+      event.preventDefault();
+      if (key === 'Home') choose(0, true);
+      else if (key === 'End') choose(tabs.length - 1, true);
+      else if (key === 'ArrowRight') choose(index + 1, true);
+      else choose(index - 1 + tabs.length, true);
+    });
+  });
 }
 
 function faqAnswer(question: string, answer: string): (Node | string)[] {

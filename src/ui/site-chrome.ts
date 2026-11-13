@@ -1,6 +1,6 @@
 import type { Route } from '../lib/route';
 import { corporateAiChatbot, corporateHome } from '../lib/corporate';
-import { shouldNoindex } from '../lib/robots';
+import { allowsIndex, shouldNoindex } from '../lib/robots';
 import { FOOTER_NOTE } from '../content/service';
 import { el } from './dom';
 
@@ -43,10 +43,10 @@ export function routeTitle(name: Route['name']): string {
   return titles[name];
 }
 
-export function applyDocumentPolicy(pathname: string, title: string): void {
+export function applyDocumentPolicy(pathname: string, title: string, allowIndex = allowsIndex()): void {
   document.title = title;
   const existing = document.querySelector('meta[name="robots"]');
-  if (!shouldNoindex(pathname)) {
+  if (!shouldNoindex(pathname, allowIndex)) {
     existing?.remove();
     return;
   }
@@ -65,7 +65,10 @@ export function masthead(current: string): HTMLElement {
     if (href === current) attrs['aria-current'] = 'page';
     return el('a', attrs, [label]);
   });
-  const nav = el('nav', { id: 'site-nav', class: 'nav' }, links);
+  const nav = el('nav', { id: 'site-nav', class: 'nav' }, [
+    ...links,
+    el('a', { class: 'nav-consult', href: '/consult' }, ['相談・申し込み']),
+  ]);
   const toggle = el('button', {
     class: 'nav-toggle',
     type: 'button',
@@ -83,7 +86,7 @@ export function masthead(current: string): HTMLElement {
         el('a', { class: 'corp-link', href: corporateHome(), target: '_blank', rel: 'noopener noreferrer' }, ['コーポレートサイトへ']),
       ]),
       nav,
-      el('a', { class: 'button', href: '/consult' }, ['相談・申し込み']),
+      el('a', { class: 'button header-cta', href: '/consult' }, ['相談・申し込み']),
       toggle,
     ]),
   ]);
@@ -113,7 +116,7 @@ export function pageShell(current: string, children: (Node | string)[], narrow =
   return el('div', { class: 'page' }, [
     el('a', { class: 'skip', href: '#main' }, ['本文へ移動']),
     masthead(current),
-    el('main', { id: 'main', class: narrow ? 'narrow-page' : '' }, children),
+    el('main', { id: 'main', tabindex: '-1', class: narrow ? 'narrow-page' : '' }, children),
     siteFooter(),
   ]);
 }

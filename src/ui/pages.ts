@@ -229,8 +229,8 @@ function reserveView(shop: Shop | undefined): HTMLElement {
     note.hidden = false;
     note.textContent = 'これは見本ページです。予約は確定していません。実際の導入時は、ここにお店の予約ページ（ホットペッパーグルメなど）が開きます。';
   });
-  return pageShell('', [
-    el('p', { class: 'eyebrow' }, ['ネット予約の見本']),
+  return el('main', { id: 'main', class: 'sheet narrow reserve-page', tabindex: '-1' }, [
+    el('p', { class: 'eyebrow' }, ['デモ']),
     el('h1', null, [name]),
     el('p', null, ['このページはデモです。送信しても予約は保存されず、お店には届きません。']),
     el('p', null, ['実際の導入時は、ここにお店の予約ページ（ホットペッパーグルメなど）が開きます。']),
@@ -238,7 +238,7 @@ function reserveView(shop: Shop | undefined): HTMLElement {
     form,
     note,
     el('p', null, [el('a', { href: '/demo/standard' }, ['チャットのデモへ戻る'])]),
-  ], true);
+  ]);
 }
 
 function planPath(plan: PlanId): string {

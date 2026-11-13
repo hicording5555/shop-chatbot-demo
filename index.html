@@ -3,6 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="description" content="美容室・サロンと整体院向けに、ホームページのよくある質問へ、用意した答えを返すチャットです。予約はボットの中では確定しません。" />
+    <meta property="og:title" content="お店のホームページで、よくある質問に答えます｜ARK" />
+    <meta property="og:description" content="美容室・サロンと整体院向けに、ホームページのよくある質問へ、用意した答えを返すチャットです。予約はボットの中では確定しません。" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/brand/ark-logo.webp" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
@@ -13,18 +19,6 @@
     <script>
       (function () {
         var path = (location.pathname || '/').replace(/\/+$/, '') || '/';
-        var prefixes = ['/admin', '/widget', '/reserve', '/shop-demo'];
-        var hide = false;
-        for (var i = 0; i < prefixes.length; i++) {
-          var prefix = prefixes[i];
-          if (path === prefix || path.indexOf(prefix + '/') === 0) hide = true;
-        }
-        if (hide) {
-          var meta = document.createElement('meta');
-          meta.name = 'robots';
-          meta.content = 'noindex, nofollow';
-          document.head.appendChild(meta);
-        }
         if (path !== '/admin' && path.indexOf('/admin/') !== 0) return;
         document.documentElement.classList.add('admin-lock');
         var framed = false;

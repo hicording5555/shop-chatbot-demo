@@ -39,7 +39,7 @@ describe('consult form', () => {
     form.querySelector<HTMLInputElement>('input[value="まず話を聞きたい"]')!.checked = true;
     form.querySelector<HTMLInputElement>('input[value="ライト"]')!.checked = true;
     form.querySelector<HTMLInputElement>('input[placeholder="紹介してくれた方の名前"]')!.value = '紹介さん';
-    const agreed = Array.from(form.querySelectorAll('label')).find((label) => label.textContent?.includes('個人情報の取扱いに同意する'));
+    const agreed = Array.from(form.querySelectorAll('label')).find((label) => label.textContent?.includes('個人情報の取り扱いに同意する'));
     agreed?.querySelector('input')?.click();
     form.requestSubmit();
     expect(form.textContent).toContain('入力内容の確認');
@@ -79,7 +79,7 @@ describe('consult form', () => {
     form.querySelector<HTMLInputElement>('input[value="飲食店"]')!.checked = true;
     form.querySelector<HTMLInputElement>('input[value="まず話を聞きたい"]')!.checked = true;
     form.querySelector<HTMLInputElement>('input[value="ライト"]')!.checked = true;
-    const agreed = Array.from(form.querySelectorAll('label')).find((label) => label.textContent?.includes('個人情報の取扱いに同意する'));
+    const agreed = Array.from(form.querySelectorAll('label')).find((label) => label.textContent?.includes('個人情報の取り扱いに同意する'));
     agreed?.querySelector('input')?.click();
     form.requestSubmit();
     const url = form.querySelector<HTMLInputElement>('input[placeholder="https://example.com"]');
@@ -92,7 +92,7 @@ describe('consult form', () => {
     form.requestSubmit();
     const consent = Array.from(form.querySelectorAll('.field-error')).find((node) => node.textContent === '同意してから送信してください') as HTMLElement;
     expect(consent.hidden).toBe(false);
-    const agreed = Array.from(form.querySelectorAll('label')).find((label) => label.textContent?.includes('個人情報の取扱いに同意する'));
+    const agreed = Array.from(form.querySelectorAll('label')).find((label) => label.textContent?.includes('個人情報の取り扱いに同意する'));
     agreed?.querySelector('input')?.click();
     expect(consent.hidden).toBe(true);
     expect(consent.textContent).toBe('');
@@ -113,7 +113,7 @@ describe('consult form', () => {
     form.querySelector<HTMLInputElement>('input[value="飲食店"]')!.checked = true;
     form.querySelector<HTMLInputElement>('input[value="まず話を聞きたい"]')!.checked = true;
     form.querySelector<HTMLInputElement>('input[value="ライト"]')!.checked = true;
-    const agreed = Array.from(form.querySelectorAll('label')).find((label) => label.textContent?.includes('個人情報の取扱いに同意する'));
+    const agreed = Array.from(form.querySelectorAll('label')).find((label) => label.textContent?.includes('個人情報の取り扱いに同意する'));
     agreed?.querySelector('input')?.click();
     form.requestSubmit();
     const reviewButton = Array.from(form.querySelectorAll('button')).find((button) => button.textContent === '入力内容を確認する') as HTMLButtonElement;

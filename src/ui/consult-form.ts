@@ -6,7 +6,7 @@ import { CAPTCHA_FAILED_MESSAGE, TURNSTILE_WAITING_MESSAGE, TURNSTILE_WIDGET_ERR
 
 const INDUSTRIES = ['美容室・サロン', '整体院', '整骨院・鍼灸院', '飲食店', 'その他'] as const;
 const PLANS = ['ライト', '標準', '充実', 'まだ決めていない'] as const;
-const KINDS = ['まず話を聞きたい', 'モニターを希望', '通常の申し込み'] as const;
+const KINDS = ['まず話を聞きたい', '通常の申し込み'] as const;
 
 type Payload = {
   shop_name: string;
@@ -115,7 +115,7 @@ export function consultForm(supabaseUrl: string, anonKey: string, initialPlan?: 
     referrer.wrap,
     notes.wrap,
     el('label', { class: 'check' }, [newsletter, '今後の案内メールを希望する（チェックしない場合は、この相談への返信と契約の履行に必要なメールのみ送ります）']),
-    el('label', { class: 'check' }, [agreed, '個人情報の取扱いに同意する']),
+    el('label', { class: 'check' }, [agreed, '個人情報の取り扱いに同意する']),
     agreedError,
   ]);
   const review = el('div', { class: 'stack review' });
@@ -124,7 +124,7 @@ export function consultForm(supabaseUrl: string, anonKey: string, initialPlan?: 
   confirmStatus.hidden = true;
   const form = el('form', { class: 'stack consult-form', novalidate: 'true' }, [
     el('p', null, [
-      `${CONSULT_INTRO}ご入力内容の取扱いは、`,
+      `${CONSULT_INTRO}ご入力内容の取り扱いは、`,
       el('a', { href: '/privacy' }, ['個人情報の取り扱い']),
       'をご覧ください。',
     ]),
@@ -200,7 +200,7 @@ export function consultForm(supabaseUrl: string, anonKey: string, initialPlan?: 
         line('紹介者の名前', payload.referrer_name),
         line('備考', payload.notes),
         line('案内メール', payload.newsletter_opt_in ? '希望する' : '希望しない'),
-        line('個人情報の取扱いへの同意', payload.privacy_agreed ? '同意する' : '同意しない'),
+        line('個人情報の取り扱いへの同意', payload.privacy_agreed ? '同意する' : '同意しない'),
         el('p', null, ['この画面では決済しません。自動返信メールは送りません。']),
         confirmStatus,
         captcha,
@@ -239,11 +239,24 @@ export function consultForm(supabaseUrl: string, anonKey: string, initialPlan?: 
     }
     const ready = widget;
     const sendButton = review.querySelector('button[type="submit"]');
+    if (!supabaseUrl || !anonKey) {
+      showNotice(confirmStatus, 'いま送信できません。時間をおいてもう一度開いてください。', 'error');
+      if (sendButton instanceof HTMLButtonElement) sendButton.disabled = false;
+      confirmStatus.scrollIntoView?.({ block: 'center' });
+      return;
+    }
     if (sendButton instanceof HTMLButtonElement) sendButton.disabled = true;
+    let client;
+    try {
+      client = createPublicClient(supabaseUrl, anonKey);
+    } catch {
+      showNotice(confirmStatus, 'いま送信できません。時間をおいてもう一度開いてください。', 'error');
+      if (sendButton instanceof HTMLButtonElement) sendButton.disabled = false;
+      return;
+    }
     sending = true;
     showNotice(confirmStatus, '送信中…', 'info');
     payload.turnstile_token = ready.token();
-    const client = createPublicClient(supabaseUrl, anonKey);
     void client.functions.invoke('consult', { body: payload }).then(async (result) => {
       const { data, error } = result;
       const status = httpStatus(result);
@@ -261,6 +274,10 @@ export function consultForm(supabaseUrl: string, anonKey: string, initialPlan?: 
       accepted = true;
       sending = false;
       showConsultSuccess(form, payload.shop_name, payload.contact_name);
+    }).catch(() => {
+      sending = false;
+      showNotice(confirmStatus, 'いま送信できません。時間をおいてもう一度開いてください。', 'error');
+      if (sendButton instanceof HTMLButtonElement) sendButton.disabled = false;
     });
 
     function backButton(): HTMLButtonElement {

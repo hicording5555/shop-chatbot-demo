@@ -116,10 +116,13 @@ h1, h2, h3 { line-height: 1.35; font-weight: 500; color: var(--ink); letter-spac
   margin: 0 0 8px;
   color: var(--blue);
   font-family: Arial, "Hiragino Sans", sans-serif;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
 }
+
+.hero-notes { margin: 12px 0 0; padding-left: 1.2rem; }
+.nav-consult { display: none; }
 
 .lede { font-size: 1.05rem; color: var(--body); }
 
@@ -215,8 +218,10 @@ h1, h2, h3 { line-height: 1.35; font-weight: 500; color: var(--ink); letter-spac
 .site-footer a { color: var(--blue); }
 .footer-inner { display: grid; gap: 8px; }
 .footer-brand .brand-logo { height: 72px; }
-.footer-en { margin: 8px 0; font-size: 11px; letter-spacing: 0.14em; color: var(--body); }
+.footer-en { margin: 8px 0; font-size: 12px; letter-spacing: 0.12em; color: var(--body); }
 .footer-nav { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+.footer-nav a, .corp-link, .demo-expand { display: inline-flex; align-items: center; min-height: 44px; }
+.consult-form .check { min-height: 44px; }
 .footer-copy { margin: 8px 0 0; color: var(--ink); }
 .footer-note { margin: 0; color: var(--body); }
 
@@ -344,14 +349,20 @@ pre {
 .widget-frame, body.widget #app { height: 100%; }
 body.widget .chat { min-height: 100vh; max-height: none; border-radius: 0; position: static; }
 
-#plans, #demo, #flow, #faq, #scope { scroll-margin-top: 88px; }
+#plans, #demo, #flow, #faq, #scope { scroll-margin-top: 80px; }
 
 @media (max-width: 900px) {
   .plan-grid, .split, .demo-layout { grid-template-columns: 1fr; }
-  .nav-toggle { display: inline-flex; }
+  .masthead-inner { flex-wrap: nowrap; min-height: 64px; gap: 8px; }
+  .brand-logo, .footer-brand .brand-logo { height: 44px; }
+  .page .masthead .header-cta { min-height: 44px; padding: 8px 10px; font-size: 13px; }
+  .nav-toggle { display: inline-flex; flex: 0 0 auto; }
   .masthead .corp-link { display: none; }
-  .masthead .nav { display: none; width: 100%; flex-direction: column; align-items: stretch; padding-bottom: 8px; }
-  .masthead .nav.is-open { display: flex; }
+  .masthead .nav { display: none; position: absolute; left: 0; right: 0; top: 100%; flex-direction: column; align-items: stretch; padding: 8px 16px 16px; background: var(--paper); border-bottom: 1px solid var(--line); }
+  .masthead .nav.is-open { display: flex; z-index: 30; }
+  .masthead .nav.is-open .nav-consult { display: inline-flex; }
+  .masthead .nav.is-open ~ .header-cta { display: none; }
+  .masthead { position: sticky; }
   .demo-frame { --demo-preferred: 50vh; --demo-max: 50vh; }
   .chat-host { order: -1; }
   .storefront { order: 1; }

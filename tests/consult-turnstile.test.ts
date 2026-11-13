@@ -42,7 +42,7 @@ function fill(form: HTMLFormElement): void {
   form.querySelector<HTMLInputElement>('input[value="飲食店"]')!.checked = true;
   form.querySelector<HTMLInputElement>('input[value="まず話を聞きたい"]')!.checked = true;
   form.querySelector<HTMLInputElement>('input[value="ライト"]')!.checked = true;
-  const agreed = Array.from(form.querySelectorAll('label')).find((label) => label.textContent?.includes('個人情報の取扱いに同意する'));
+  const agreed = Array.from(form.querySelectorAll('label')).find((label) => label.textContent?.includes('個人情報の取り扱いに同意する'));
   agreed?.querySelector('input')?.click();
 }
 
