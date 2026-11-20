@@ -627,12 +627,14 @@ body.widget .chat { height: 100%; min-height: 0; max-height: 100%; border-radius
 .shot-pin { position: absolute; z-index: 1; transform: translate(0, -50%); display: inline-flex; align-items: center; gap: 4px; height: 18px; margin: 0; padding: 0 7px 0 0; border-radius: 999px; background: #fff; border: 1px solid #d5deea; box-shadow: 0 1px 3px rgba(16, 29, 50, 0.18); color: var(--ink); font-size: 11px; font-weight: 700; line-height: 1; white-space: nowrap; }
 .shot-pin span { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: #fff; font-size: 11px; }
 
-.zig { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 40px; align-items: center; padding: 36px 0; }
+.zig { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 28px; align-items: center; padding: 16px 0; }
 .zig.flip { direction: rtl; }
 .zig.flip > * { direction: ltr; }
-.zig.band-plain { background: #f8fafc; border-radius: 20px; padding: 36px; }
-.zig-phone .iphone { width: 270px; height: 520px; margin: 0 auto; }
-.zig-phone .phone-shot { object-position: top center; }
+.zig.band-plain { background: #f8fafc; border-radius: 20px; padding: 16px 28px; }
+.zig-copy > :first-child { margin-top: 0; }
+.zig-copy > :last-child { margin-bottom: 0; }
+.zig-phone .iphone { width: 260px; height: 430px; margin: 0 auto; }
+.zig-phone .phone-shot { object-fit: cover; object-position: top center; }
 .tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; padding: 0; list-style: none; }
 .tags li { padding: 6px 10px; border-radius: 999px; background: #eff6ff; color: var(--ink); font-size: 13px; }
 
