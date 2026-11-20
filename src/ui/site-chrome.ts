@@ -1,13 +1,16 @@
 import type { Route } from '../lib/route';
 import { corporateAiChatbot, corporateHome } from '../lib/corporate';
 import { allowsIndex, shouldNoindex } from '../lib/robots';
+import { BRAND } from '../content/brand';
 import { FOOTER_NOTE } from '../content/service';
 import { el } from './dom';
 
 const NAV: [string, string][] = [
+  ['/#how', '仕組み'],
   ['/#demo', 'デモ'],
   ['/#plans', '料金'],
-  ['/#faq', 'FAQ'],
+  ['/#flow', '導入の流れ'],
+  ['/#faq', 'よくある質問'],
 ];
 
 /** 通常色のロゴ。縮小したファイルだけを置く。外部URLからは読み込まない。 */
@@ -25,19 +28,19 @@ export function arkLogo(): HTMLAnchorElement {
 
 export function routeTitle(name: Route['name']): string {
   const titles: Record<Route['name'], string> = {
-    landing: '電話に出られない時間の問い合わせを、ホームページで受付｜ARK',
-    plans: 'プランと料金｜ARK',
-    flow: '導入の流れ｜ARK',
-    faq: 'よくある質問｜ARK',
-    consult: '相談・申し込み｜ARK',
-    privacy: '個人情報の取り扱い｜ARK',
-    legal: '特定商取引法に基づく表記｜ARK',
-    terms: '利用規約｜ARK',
-    demo: 'プラン別デモ（架空の店）｜ARK',
-    widget: 'チャット｜ARK',
-    admin: '管理｜ARK',
-    reserve: '予約ページの見本｜ARK',
-    notfound: 'ページが見つかりません｜ARK',
+    landing: '電話に出られない時間の「いくら？」に、ホームページが答えます｜BOTLIA',
+    plans: 'プランと料金｜BOTLIA',
+    flow: '導入の流れ｜BOTLIA',
+    faq: 'よくある質問｜BOTLIA',
+    consult: '相談・申し込み｜BOTLIA',
+    privacy: '個人情報の取り扱い｜BOTLIA',
+    legal: '特定商取引法に基づく表記｜BOTLIA',
+    terms: '利用規約｜BOTLIA',
+    demo: 'プラン別デモ（架空の店）｜BOTLIA',
+    widget: 'チャット｜BOTLIA',
+    admin: '管理｜BOTLIA',
+    reserve: '予約ページの見本｜BOTLIA',
+    notfound: 'ページが見つかりません｜BOTLIA',
   };
   return titles[name];
 }
@@ -75,16 +78,27 @@ export function masthead(current: string): HTMLElement {
     const open = nav.classList.toggle('is-open');
     toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
   });
-  return el('header', { class: 'masthead' }, [
+  const header = el('header', { class: 'masthead' }, [
     el('div', { class: 'wrap masthead-inner' }, [
-      el('a', { class: 'wordmark', href: '/', 'aria-label': '受付ボット ホーム' }, [
-        el('span', { class: 'wordmark-name' }, ['受付ボット']),
-        el('span', { class: 'wordmark-host' }, ['bot.arktechlab.com']),
-      ]),
+      serviceWordmark(),
       nav,
-      el('a', { class: 'button header-cta', href: '/consult' }, ['導入相談をする']),
+      el('a', { class: 'button header-cta', href: '/consult' }, ['導入を相談する']),
       toggle,
     ]),
+  ]);
+  const onScroll = () => header.classList.toggle('is-scrolled', window.scrollY > 0);
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+  return header;
+}
+
+export function serviceWordmark(): HTMLAnchorElement {
+  const mark = BRAND.logoSrc
+    ? el('img', { class: 'wordmark-logo', src: BRAND.logoSrc, alt: BRAND.name })
+    : el('span', { class: 'wordmark-name' }, [BRAND.name]);
+  return el('a', { class: 'wordmark', href: '/', 'aria-label': `${BRAND.name} ホーム` }, [
+    mark,
+    el('span', { class: 'wordmark-kana' }, [BRAND.kana]),
   ]);
 }
 

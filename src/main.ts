@@ -63,16 +63,30 @@ function render(): void {
     }
   }
   if (fixture && route.name === 'admin') {
-    void import('./data/demo-seed').then(({ demoFaqs, demoShops }) => {
-      const shop = demoShops.find((item) => item.industry === 'seitai');
-      if (!shop || !app) return;
-      mountAdminFixture(
-        app,
-        shop,
-        demoFaqs.filter((item) => item.shopId === shop.id),
-        [],
-      );
-    });
+    const slug = new URLSearchParams(window.location.search).get('shop') || 'aoba';
+    const template = templateBySlug(slug);
+    if (template && app) {
+      mountAdminFixture(app, template.shop, [
+        {
+          id: 'fixture-survey',
+          shopId: template.shop.id,
+          question: '現地調査は無料ですか',
+          answer: '無料です。調査のあと、金額は見積書でお出しします。',
+          keywords: ['見積', '無料'],
+          published: true,
+          sortOrder: 1,
+        },
+        {
+          id: 'fixture-days',
+          shopId: template.shop.id,
+          question: '工期はどのくらいですか',
+          answer: '戸建ての塗り替えは、天候によりおおむね10〜14日が目安です。',
+          keywords: ['工期', '日数'],
+          published: true,
+          sortOrder: 2,
+        },
+      ], []);
+    }
     return;
   }
   if (route.name === 'landing') {

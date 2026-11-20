@@ -26,7 +26,7 @@ export interface GuideTurn {
 
 const NO_PUSH = 'しつこい営業電話はしません。';
 
-const PAINT_CHIPS: ChatButton[] = [
+export const PAINT_CHIPS: ChatButton[] = [
   { id: 'flow:cost', label: '費用の目安を知る' },
   { id: 'flow:survey', label: '無料の現地調査について' },
   { id: 'flow:schedule', label: '工期・雨の日の対応' },
@@ -36,7 +36,7 @@ const PAINT_CHIPS: ChatButton[] = [
   { id: 'flow:book', label: '無料の現地調査を予約する' },
 ];
 
-const JUKU_CHIPS: ChatButton[] = [
+export const JUKU_CHIPS: ChatButton[] = [
   { id: 'flow:price', label: '授業料・費用について' },
   { id: 'flow:trial', label: '無料体験・学習相談について' },
   { id: 'flow:course', label: '学年・教科・通う回数' },
@@ -46,7 +46,7 @@ const JUKU_CHIPS: ChatButton[] = [
   { id: 'flow:book', label: '無料体験を予約する' },
 ];
 
-const SEITAI_CHIPS: ChatButton[] = [
+export const SEITAI_CHIPS: ChatButton[] = [
   { id: 'flow:first', label: '初めての方へ（当日の流れ）' },
   { id: 'flow:price', label: '料金・所要時間' },
   { id: 'flow:clothes', label: '服装・着替え' },

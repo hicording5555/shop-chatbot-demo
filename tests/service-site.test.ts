@@ -39,20 +39,24 @@ describe('signup site', () => {
     const view = landingView();
     const headings = Array.from(view.querySelectorAll('h1, h2')).map((node) => node.textContent);
     expect(headings).toEqual([
-      '電話に出られない時も、ホームページで受付',
-      '仕組みは、この3つです',
-      '今すぐ、3業種を切り替えられます',
-      '業種ごとの受付を、その場でお試しください',
-      '電話に出られない時間も、問い合わせを取りこぼさない',
-      '初期費用 0円。月額 10,780円（税込）から',
-      '導入までの流れ',
+      '電話に出られない時間の「いくら？」に、ホームページが答えます',
+      'お客様が聞きたい時間に、お店は手が離せない',
+      '電話、問い合わせフォーム、受付ボットのちがい',
+      '夜9時の「外壁いくら？」は、こう受け付けます',
+      '3つの業種のデモを、いま試せます',
+      '答えの文面は、お店で直せます',
+      '業種ごとに、よく聞かれる質問を用意しています',
+      'できること、できないこと',
+      '初期費用0円。月額10,780円（税込）から',
+      '申し込みから公開まで',
       'よくある質問',
-      'まずは、動く実物をご覧ください',
+      'まずは、デモで動きを見てください',
     ]);
-    expect(view.textContent).toContain('選択式で、用意した答えだけを返します。');
-    expect(view.textContent).toContain('自動更新は【未定】です。相談フォームでは決済しません。');
+    expect(view.textContent).toContain('お客様はボタンを選ぶだけ。お店が用意した答えだけを返す、選択式の受付チャットです。');
+    expect(view.textContent).toContain('自動更新は【未定】です。');
+    expect(view.textContent).toContain('相談フォームでは決済しません。');
     expect(view.textContent).toContain('12か月契約・毎月払い');
-    expect(view.textContent).toContain('初期費用 0円');
+    expect(view.textContent).toContain('初期費用0円');
     expect(view.textContent).toContain('おすすめ');
     expect(view.textContent).not.toContain('予約フォーム連携');
     expect(view.textContent).not.toContain('対話履歴');
@@ -60,9 +64,9 @@ describe('signup site', () => {
     expect(view.querySelector('a[href="/demo/painting"]')).not.toBeNull();
     expect(view.querySelector('a[href="/demo/juku"]')).not.toBeNull();
     expect(view.querySelector('a[href="/demo/seitai"]')).not.toBeNull();
-    expect(view.querySelector('.header-cta')?.textContent).toBe('導入相談をする');
-    expect(view.querySelector('.device-stage')).not.toBeNull();
-    expect(view.querySelector('.cta-laptop')).not.toBeNull();
+    expect(view.querySelector('.header-cta')?.textContent).toBe('導入を相談する');
+    expect(view.querySelector('.iphone')).not.toBeNull();
+    expect(view.querySelector('.cta-laptop')).toBeNull();
     expect(view.textContent).not.toContain('飲食店・美容室・整体院');
     expect(view.textContent).not.toContain('美容室・サロン');
     const industries = Array.from(view.querySelectorAll('[aria-label="業種"] button')).map((node) => node.textContent);
@@ -84,7 +88,7 @@ describe('signup site', () => {
       expect(view.textContent).toContain(`税別 ${yen(plan.monthlyTaxEx)}`);
       expect(view.textContent).toContain(`12か月の合計 ${yen(plan.termTotalTaxIn)}（税込）`);
     }
-    expect(view.textContent).toContain('初期費用なし（設置・基本設定込み）');
+    expect(view.textContent).toContain('初期費用0円（設置・基本設定込み）');
     expect(view.textContent).not.toContain('月1回まで無料です');
     expect(view.textContent).not.toContain('残り回数を表示します');
     expect(view.textContent).not.toContain('3つのプランから選べ');
@@ -100,15 +104,15 @@ describe('signup site', () => {
     expect(frames[0]?.getAttribute('loading')).toBe('lazy');
     expect(frames[0]?.getAttribute('src')).toBe('/widget/standard/aoba');
     const expand = view.querySelector('.demo-expand');
-    expect(expand?.textContent).toBe('別ページで大きく見る');
+    expect(expand?.textContent).toBe('大きな画面で開く');
     expect(expand?.getAttribute('href')).toBe('/demo/painting');
-    expect(view.textContent).toContain('この業種テンプレートで自社デモを相談する');
+    expect(view.textContent).toContain('この業種で相談する');
     expect(frames[0]?.parentElement?.contains(expand)).toBe(false);
     expect(view.textContent).toContain('実在のお店とは関係ありません');
-    expect(view.textContent).toContain('いまは未実装です');
+    expect(view.textContent).toContain('支払い画面は準備中です');
     expect(view.textContent).toContain(REPLY_WINDOW);
     const nav = Array.from(view.querySelectorAll('.nav a')).map((node) => node.getAttribute('href'));
-    expect(nav).toEqual(['/#demo', '/#plans', '/#faq']);
+    expect(nav).toEqual(['/#how', '/#demo', '/#plans', '/#flow', '/#faq']);
     expect(view.querySelectorAll('.nav a[href="/consult"]')).toHaveLength(0);
     expect(view.querySelectorAll('.header-cta')).toHaveLength(1);
     expect(view.querySelector('a[href="/admin"]')).toBeNull();

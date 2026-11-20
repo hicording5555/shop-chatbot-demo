@@ -1,52 +1,27 @@
-import type { PlanId } from '../types';
-import { PLAN_LABEL } from '../types';
 import {
   CONTRACT_NOTE,
   DELIVERY_DAYS,
-  DEMO_INDUSTRIES,
   DEMO_PLAN_ID,
   FAQ_ITEMS,
-  FICTIONAL_SHOP,
   FUTURE_CHANGES,
-  HERO_BODY,
-  HERO_EYEBROW,
-  HERO_TITLE,
-  HOME_FAQ,
-  INDUSTRY_CARDS,
-  ONBOARDING,
   INITIAL_FEE_NOTE,
   LEGAL_ITEMS,
   PRICE_CHIPS,
   PRICE_FOOTNOTE,
   REPLY_WINDOW,
-  SHIFTS,
   SERVICE_PLANS,
   TERMS_HEADINGS,
   UNDECIDED,
   priceListText,
-  widgetPath,
   yen,
   type ServicePlan,
 } from '../content/service';
-import laptopUrl from '../assets/cta-laptop-dark.jpg';
-import paintingArt from '../assets/industry-painting.jpg';
-import jukuArt from '../assets/industry-juku.jpg';
-import seitaiArt from '../assets/industry-seitai.jpg';
 import { el } from './dom';
+import { landingPage } from './landing';
 import { pageShell } from './site-chrome';
 
 export function landingView(): HTMLElement {
-  return pageShell('/', [
-    hero(),
-    howSection(),
-    demoSection(),
-    industrySection(),
-    shiftSection(),
-    plansSection(true),
-    flowSummary(),
-    faqSummary(),
-    closing(),
-  ]);
+  return landingPage();
 }
 
 export function plansView(): HTMLElement {
@@ -135,138 +110,6 @@ export function termsView(): HTMLElement {
   ], true);
 }
 
-function hero(): HTMLElement {
-  const [lead, rest] = HERO_TITLE.split('、');
-  return el('section', { class: 'hero' }, [
-    el('div', { class: 'wrap hero-grid' }, [
-      el('div', { class: 'hero-copy' }, [
-        el('p', { class: 'eyebrow' }, [HERO_EYEBROW]),
-        el('p', { class: 'offer-pill' }, ['初期費用 0円・月額 10,780円（税込）〜']),
-        el('h1', null, [
-          el('span', { class: 'hero-line' }, [`${lead}、`]),
-          el('span', { class: 'hero-line' }, [rest ?? '']),
-        ]),
-        el('p', { class: 'lede' }, [HERO_BODY]),
-        el('div', { class: 'cta-row' }, [
-          el('a', { class: 'button', href: '#demo' }, ['デモを試す']),
-          el('a', { class: 'button ghost', href: '/consult' }, ['導入相談をする']),
-        ]),
-      ]),
-      deviceStage(),
-    ]),
-  ]);
-}
-
-function deviceStage(): HTMLElement {
-  const screen = el('div', { class: 'hero-screen' }, [
-    el('div', { class: 'shop-mini' }, [
-      el('div', { class: 'shop-nav' }, [
-        el('strong', null, ['あおば塗装']),
-        el('span', null, ['メニュー']),
-      ]),
-      el('img', { class: 'shop-visual', src: paintingArt, alt: '' }),
-      el('p', null, ['外壁の概算を、チャットで。']),
-    ]),
-    el('div', { class: 'chat-sheet' }, [
-      el('span', { class: 'sheet-grab' }, []),
-      el('p', { class: 'bubble bot' }, ['ご用件を選んでください。']),
-      el('p', { class: 'bubble user' }, ['外壁塗装っていくらくらい？']),
-      el('div', { class: 'bubble bot' }, [
-        el('p', { class: 'bubble-price' }, ['78万〜108万円（税込）']),
-        el('p', null, ['金額は現地調査で確定。']),
-      ]),
-    ]),
-  ]);
-  return el('div', { class: 'hero-stage device-stage', 'aria-hidden': 'true' }, [
-    iphone(screen, true),
-  ]);
-}
-
-function iphone(screen: HTMLElement, home: boolean): HTMLElement {
-  const status = el('div', { class: 'ios-status' }, [
-    el('span', { class: 'ios-time' }, ['9:41']),
-    el('span', { class: 'ios-island' }, []),
-    el('span', { class: 'ios-right' }, []),
-  ]);
-  const right = status.querySelector('.ios-right');
-  if (right) {
-    right.innerHTML = '<svg viewBox="0 0 18 12" width="17" height="12" aria-hidden="true"><rect x="0" y="8" width="3" height="4" rx=".5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx=".5" fill="currentColor"/><rect x="10" y="2.5" width="3" height="9.5" rx=".5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx=".5" fill="currentColor"/></svg><span class="ios-gen">5G</span><svg viewBox="0 0 28 13" width="26" height="13" aria-hidden="true"><rect x=".8" y=".8" width="22" height="11.4" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2.4" y="2.4" width="16" height="8.2" rx="1.4" fill="currentColor"/><rect x="24.2" y="4" width="2.2" height="5" rx="1" fill="currentColor"/></svg>';
-  }
-  return el('div', { class: 'iphone' }, [
-    el('span', { class: 'iphone-btn silent' }, []),
-    el('span', { class: 'iphone-btn vol-up' }, []),
-    el('span', { class: 'iphone-btn vol-down' }, []),
-    el('span', { class: 'iphone-btn power' }, []),
-    el('div', { class: 'iphone-bezel' }, [
-      el('div', { class: 'iphone-screen' }, [
-        status,
-        screen,
-        ...(home ? [el('div', { class: 'home-indicator' }, [])] : []),
-      ]),
-    ]),
-  ]);
-}
-
-function howSection(): HTMLElement {
-  const nodes: { icon: IconName; title: string; body: string }[] = [
-    { icon: 'tap', title: 'お客様が質問を選ぶ', body: '画面のボタンを押すだけです。' },
-    { icon: 'check', title: '用意した答えだけを返答', body: '決めていない文は返しません。' },
-    { icon: 'calendar', title: '既存の予約ページへ案内', body: 'ボットの中では確定しません。' },
-  ];
-  const row = el('div', { class: 'how-row' });
-  nodes.forEach((node, index) => {
-    row.append(el('article', { class: 'how-node' }, [
-      icon(node.icon),
-      el('h3', null, [node.title]),
-      el('p', null, [node.body]),
-    ]));
-    if (index < nodes.length - 1) row.append(el('div', { class: 'how-arrow', 'aria-hidden': 'true' }, ['→']));
-  });
-  return el('section', { class: 'block how band', id: 'how' }, [
-    el('div', { class: 'wrap' }, [
-      el('h2', null, ['仕組みは、この3つです']),
-      row,
-    ]),
-  ]);
-}
-
-function industrySection(): HTMLElement {
-  return el('section', { class: 'block band', id: 'industries' }, [
-    el('div', { class: 'wrap' }, [
-      el('p', { class: 'eyebrow' }, ['実物デモ']),
-      el('h2', null, ['業種ごとの受付を、その場でお試しください']),
-      el('div', { class: 'issue-grid' }, INDUSTRY_CARDS.map((item) => el('article', { class: 'industry-card' }, [
-        el('img', { class: 'industry-art', src: industryArt(item.icon), alt: `${item.title}のイメージ` }),
-        el('h3', null, [item.title]),
-        el('p', { class: 'industry-quote' }, [`「${item.quote}」`]),
-        el('p', null, [item.body]),
-        el('a', { class: 'button industry-cta', href: item.href }, [item.cta]),
-      ]))),
-    ]),
-  ]);
-}
-
-function shiftSection(): HTMLElement {
-  return el('section', { class: 'block', id: 'reasons' }, [
-    el('div', { class: 'wrap' }, [
-      el('p', { class: 'eyebrow' }, ['導入後に変わること']),
-      el('h2', null, ['電話に出られない時間も、問い合わせを取りこぼさない']),
-      el('div', { class: 'issue-grid' }, SHIFTS.map((item) => el('article', { class: 'shift-card' }, [
-        el('div', { class: 'shift-head' }, [
-          el('span', { class: 'shift-no' }, [item.step]),
-          el('h3', null, [item.title]),
-        ]),
-        el('div', { class: 'shift-before' }, [
-          icon(beforeIcon(item.step)),
-          el('p', null, [item.before]),
-        ]),
-        el('div', { class: 'shift-arrow', 'aria-hidden': 'true' }, [el('span', null, ['↓'])]),
-        el('p', { class: 'shift-after' }, [icon(afterIcon(item.step)), item.after]),
-      ]))),
-    ]),
-  ]);
-}
-
 function plansSection(onHome: boolean): HTMLElement {
   return el('section', { class: 'block', id: 'plans' }, [
     el('div', { class: 'wrap' }, [
@@ -338,153 +181,12 @@ function compareTable(): HTMLElement {
   ]);
 }
 
-function demoSection(): HTMLElement {
-  let industry = DEMO_INDUSTRIES[0];
-  let plan: PlanId = DEMO_PLAN_ID;
-  const frame = el('iframe', {
-    class: 'demo-frame',
-    title: `架空の店のチャット（${PLAN_LABEL[plan]}）`,
-    src: widgetPath(plan, industry.slug),
-    loading: 'lazy',
-  }) as HTMLIFrameElement;
-  const expand = el('a', { class: 'demo-expand', href: `/demo/${industry.id}` }, ['別ページで大きく見る']);
-  const planNote = el('p', { class: 'plan-note' }, [planCaption(plan)]);
-  const admin = adminPreview();
-  const install = el('a', { class: 'button demo-install', href: `/consult?plan=${plan}` }, ['この業種テンプレートで自社デモを相談する']);
-  const industryTabs = DEMO_INDUSTRIES.map((item, index) => tabButton(`demo-industry-${index}`, item.label, item.id === industry.id));
-  const planIds: PlanId[] = ['light', 'standard', 'full'];
-  const planTabs = planIds.map((id, index) => tabButton(`demo-plan-${index}`, PLAN_LABEL[id], id === plan));
-  const panel = el('div', {
-    id: 'demo-panel',
-    class: 'demo-stage',
-    role: 'tabpanel',
-    'aria-labelledby': 'demo-industry-0',
-  }, [el('div', { class: 'demo-device' }, [iphone(frame, false)])]);
-  function sync(): void {
-    frame.src = widgetPath(plan, industry.slug);
-    frame.title = `架空の店のチャット（${industry.label}・${PLAN_LABEL[plan]}）`;
-    expand.href = `/demo/${industry.id}`;
-    planNote.textContent = planCaption(plan);
-    admin.hidden = plan === 'light';
-    install.href = `/consult?plan=${plan}`;
-    const selected = industryTabs.find((tab) => tab.getAttribute('aria-selected') === 'true');
-    if (selected) panel.setAttribute('aria-labelledby', selected.id);
-  }
-  wireTabs(industryTabs, (index) => {
-    industry = DEMO_INDUSTRIES[index];
-    sync();
-  });
-  wireTabs(planTabs, (index) => {
-    plan = planIds[index];
-    sync();
-  });
-  return el('section', { class: 'block demo-block', id: 'demo' }, [
-    el('div', { class: 'wrap' }, [
-      el('h2', null, ['今すぐ、3業種を切り替えられます']),
-      el('p', null, [FICTIONAL_SHOP, '質問を選んで、動きを確認できます。']),
-      el('div', { class: 'tablist', role: 'tablist', 'aria-label': '業種' }, industryTabs),
-      el('div', { class: 'tablist', role: 'tablist', 'aria-label': 'プラン' }, planTabs),
-      planNote,
-      panel,
-      el('p', { class: 'demo-install-row' }, [install]),
-      admin,
-      el('p', { class: 'demo-expand-row' }, [expand]),
-    ]),
-  ]);
-}
-
-function planCaption(plan: PlanId): string {
-  if (plan === 'light') return 'ライト：用意した質問への回答だけを返します。';
-  if (plan === 'full') return '充実：選択式の案内に加えて、人へ引き継げます。';
-  return '標準：選択式の案内と、管理画面の見本です。';
-}
-
-function adminPreview(): HTMLElement {
-  return el('aside', { class: 'admin-sample' }, [
-    el('h3', null, ['管理画面の見本']),
-    el('p', { class: 'hint' }, ['標準以上では、お店が質問と答えを直せます。これは見本です。']),
-    el('article', { class: 'faq-card' }, [
-      el('h4', null, ['現地調査は無料ですか']),
-      el('p', null, ['無料です。調査のあと、金額は見積書でお出しします。']),
-    ]),
-  ]);
-}
-
-function flowSummary(): HTMLElement {
-  return el('section', { class: 'block', id: 'flow' }, [
-    el('div', { class: 'wrap' }, [
-      el('h2', null, ['導入までの流れ']),
-      el('ol', { class: 'steps onboarding' }, ONBOARDING.map((item) => el('li', null, [
-        el('div', { class: 'step-top' }, [
-          icon(stepIcon(item.step)),
-          el('span', { class: 'step-no' }, [item.step]),
-        ]),
-        el('strong', null, [item.title]),
-        el('span', { class: 'step-body' }, [item.body]),
-      ]))),
-      el('p', { class: 'price-footnote' }, [`ご相談には${REPLY_WINDOW}にメールで返信します。訪問やビデオ通話はありません。`]),
-    ]),
-  ]);
-}
-
-function faqSummary(): HTMLElement {
-  return el('section', { class: 'block', id: 'faq' }, [
-    el('div', { class: 'wrap narrow-copy' }, [
-      el('h2', null, ['よくある質問']),
-      el('div', { class: 'faq-list' }, HOME_FAQ.map((item) => el('article', { class: 'faq-item' }, [
-        el('h3', null, [item.question]),
-        el('p', null, [item.answer]),
-      ]))),
-      el('div', { class: 'cta-row' }, [
-        el('a', { class: 'button ghost', href: '/faq' }, ['よくある質問の一覧']),
-      ]),
-    ]),
-  ]);
-}
 
 function termsBody(heading: string): string {
   if (heading.startsWith('契約の成立')) return '相談・申し込みフォームの送信だけでは、契約は成立しません。支払いの画面は未実装です。成立の細目は【未定】です。';
   if (heading.startsWith('料金と継続課金')) return `${CONTRACT_NOTE}${INITIAL_FEE_NOTE}。`;
   if (heading === '解約') return '期間の途中で解約する場合も、残りの月数の料金をお支払いいただきます。手続きの期限と方法は【未定】です。自動更新は【未定】です。解約後はチャットを停止します。';
   return UNDECIDED;
-}
-
-function tabButton(id: string, label: string, selected: boolean): HTMLButtonElement {
-  const button = el('button', {
-    id,
-    type: 'button',
-    class: 'tab',
-    role: 'tab',
-    'aria-selected': selected ? 'true' : 'false',
-    'aria-controls': 'demo-panel',
-    tabindex: selected ? '0' : '-1',
-  }, [label]) as HTMLButtonElement;
-  return button;
-}
-
-function wireTabs(tabs: HTMLButtonElement[], onPick: (index: number) => void): void {
-  const choose = (index: number, focus: boolean) => {
-    const next = (index + tabs.length) % tabs.length;
-    tabs.forEach((tab, item) => {
-      const on = item === next;
-      tab.setAttribute('aria-selected', on ? 'true' : 'false');
-      tab.tabIndex = on ? 0 : -1;
-    });
-    onPick(next);
-    if (focus) tabs[next].focus();
-  };
-  tabs.forEach((tab, index) => {
-    tab.addEventListener('click', () => choose(index, false));
-    tab.addEventListener('keydown', (event) => {
-      const key = event.key;
-      if (key !== 'ArrowRight' && key !== 'ArrowLeft' && key !== 'Home' && key !== 'End') return;
-      event.preventDefault();
-      if (key === 'Home') choose(0, true);
-      else if (key === 'End') choose(tabs.length - 1, true);
-      else if (key === 'ArrowRight') choose(index + 1, true);
-      else choose(index - 1 + tabs.length, true);
-    });
-  });
 }
 
 function faqAnswer(question: string, answer: string): (Node | string)[] {
@@ -505,66 +207,3 @@ function faqAnswer(question: string, answer: string): (Node | string)[] {
   return [answer];
 }
 
-function closing(): HTMLElement {
-  return el('section', { class: 'closing' }, [
-    el('img', {
-      class: 'cta-laptop',
-      src: laptopUrl,
-      alt: '暗い机の上で開いたノートPC',
-    }),
-    el('div', { class: 'wrap closing-inner' }, [
-      el('h2', null, ['まずは、', el('br', null), '動く実物をご覧ください']),
-      el('p', null, ['初期費用 0円。月額 10,780円（税込）から始められます。この送信では決済しません。']),
-      el('div', { class: 'cta-row' }, [
-        el('a', { class: 'button', href: '#demo' }, ['デモを試す']),
-        el('a', { class: 'button ghost closing-ghost', href: '/consult' }, ['導入相談をする']),
-      ]),
-    ]),
-  ]);
-}
-
-type IconName = 'tap' | 'check' | 'calendar' | 'missed' | 'worry' | 'hesitate' | 'reply' | 'guide' | 'chat' | 'screen' | 'tune' | 'publish';
-
-function industryArt(iconName: 'paint' | 'book' | 'care'): string {
-  if (iconName === 'book') return jukuArt;
-  if (iconName === 'care') return seitaiArt;
-  return paintingArt;
-}
-
-function beforeIcon(step: string): IconName {
-  if (step === '02') return 'worry';
-  if (step === '03') return 'hesitate';
-  return 'missed';
-}
-
-function afterIcon(step: string): IconName {
-  if (step === '02') return 'guide';
-  if (step === '03') return 'chat';
-  return 'reply';
-}
-
-function stepIcon(step: string): IconName {
-  if (step === '02') return 'tune';
-  if (step === '03') return 'publish';
-  return 'screen';
-}
-
-function icon(name: IconName): HTMLElement {
-  const paths: Record<IconName, string> = {
-    tap: '<rect x="16" y="6" width="16" height="28" rx="3" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M22 34h4" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
-    check: '<path d="M10 16h20a6 6 0 0 1 6 6v8a6 6 0 0 1-6 6H16l-6 6v-6a6 6 0 0 1-0-0" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M16 26l4 4 8-8" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
-    calendar: '<rect x="10" y="12" width="28" height="24" rx="3" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M10 20h28M18 8v8M30 8v8M32 30l6 6" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
-    missed: '<rect x="16" y="6" width="14" height="28" rx="3" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M21 28h4" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/><circle cx="33" cy="15" r="7" fill="#fff" stroke="#1B50C2" stroke-width="2"/><path d="M30 15h6" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
-    worry: '<circle cx="24" cy="24" r="14" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M18 20h.1M30 20h.1M18 30c2-3 10-3 12 0" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
-    hesitate: '<rect x="16" y="8" width="16" height="28" rx="3" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M20 18h8M22 28h4" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
-    reply: '<path d="M8 14h24a6 6 0 0 1 6 6v6a6 6 0 0 1-6 6H16l-8 6v-6" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M16 24l4 4 8-8" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
-    guide: '<circle cx="24" cy="24" r="14" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M24 16v10l6 4" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
-    chat: '<path d="M8 14h28a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H18l-8 6v-6H8a0 0 0 0 1 0 0" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M16 22h12" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
-    screen: '<rect x="8" y="10" width="32" height="22" rx="3" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M18 38h12M24 32v6" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
-    tune: '<circle cx="16" cy="18" r="3" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><circle cx="32" cy="30" r="3" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M8 18h5M19 18h21M8 30h21M35 30h5" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
-    publish: '<path d="M12 34V14l12-6 12 6v20" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M20 34V22h8v12" stroke="#1B50C2" stroke-width="2"/>',
-  };
-  const holder = el('span', { class: `duo-icon duo-${name}`, 'aria-hidden': 'true' });
-  holder.innerHTML = `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">${paths[name]}</svg>`;
-  return holder;
-}
