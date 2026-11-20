@@ -27,21 +27,33 @@ export interface GuideTurn {
 const NO_PUSH = 'しつこい営業電話はしません。';
 
 const PAINT_CHIPS: ChatButton[] = [
-  { id: 'flow:cost', label: 'だいたいの費用を知りたい' },
-  { id: 'flow:symptom', label: '雨漏り・ひび割れが気になる' },
-  { id: 'flow:process', label: '工事の流れ・期間・支払いを知りたい' },
+  { id: 'flow:cost', label: '費用の目安を知る' },
+  { id: 'flow:survey', label: '無料の現地調査について' },
+  { id: 'flow:schedule', label: '工期・雨の日の対応' },
+  { id: 'flow:color', label: '塗料・色選びの相談' },
+  { id: 'flow:warranty', label: '保証・アフターフォロー' },
+  { id: 'flow:living', label: '工事中の生活（洗濯物・駐車・近隣挨拶）' },
+  { id: 'flow:book', label: '無料の現地調査を予約する' },
 ];
 
 const JUKU_CHIPS: ChatButton[] = [
-  { id: 'flow:course', label: '学年・目的に合うコースを知りたい' },
-  { id: 'flow:price', label: '料金・授業料の目安は？' },
-  { id: 'flow:trial', label: '無料体験を申し込みたい' },
+  { id: 'flow:price', label: '授業料・費用について' },
+  { id: 'flow:trial', label: '無料体験・学習相談について' },
+  { id: 'flow:course', label: '学年・教科・通う回数' },
+  { id: 'flow:timetable', label: '時間割・部活や習い事との両立' },
+  { id: 'flow:makeup', label: '振替（欠席したとき）' },
+  { id: 'flow:exam', label: '定期テスト・受験対策' },
+  { id: 'flow:book', label: '無料体験を予約する' },
 ];
 
 const SEITAI_CHIPS: ChatButton[] = [
-  { id: 'flow:area', label: 'つらい場所からメニューを選びたい' },
-  { id: 'flow:price', label: '初回料金・通い方の目安は？' },
-  { id: 'flow:visit', label: '予約方法・営業時間を知りたい' },
+  { id: 'flow:first', label: '初めての方へ（当日の流れ）' },
+  { id: 'flow:price', label: '料金・所要時間' },
+  { id: 'flow:clothes', label: '服装・着替え' },
+  { id: 'flow:cancel', label: '予約・キャンセル・支払い' },
+  { id: 'flow:insurance', label: '保険は使えますか？' },
+  { id: 'flow:area', label: '気になる箇所からコースを見る' },
+  { id: 'flow:book', label: 'ご予約・空き確認' },
 ];
 
 export function templateOf(shop: Shop): NicheTemplate | undefined {
@@ -87,9 +99,13 @@ export function guideFromText(plan: PlanId, shop: Shop, text: string): GuideTurn
   if (!template) return null;
   if (containsEfficacyClaim(text) || /ヘルニア|診断|病気|完治/.test(text)) return null;
   const folded = text.replace(/\s/g, '');
-  if (template.id === 'painting' && /費用|いくら|料金|価格|見積/.test(folded)) return openFlow(plan, template, 'cost');
+  if (template.id === 'painting' && /費用|いくら|価格/.test(folded)) return openFlow(plan, template, 'cost');
+  if (template.id === 'painting' && /見積|現地調査/.test(folded)) return openFlow(plan, template, 'survey');
   if (template.id === 'painting' && /雨漏り|ひび割れ|ひび/.test(folded)) return openFlow(plan, template, 'symptom');
-  if (template.id === 'juku' && /コース|学年|授業料/.test(folded)) return openFlow(plan, template, 'course');
+  if (template.id === 'juku' && /授業料|月謝/.test(folded)) return openFlow(plan, template, 'price');
+  if (template.id === 'juku' && /体験/.test(folded)) return openFlow(plan, template, 'trial');
+  if (template.id === 'juku' && /コース|学年/.test(folded)) return openFlow(plan, template, 'course');
+  if (template.id === 'seitai' && /保険/.test(folded)) return openFlow(plan, template, 'insurance');
   if (template.id === 'seitai' && /首|肩|腰|姿勢/.test(folded)) return openFlow(plan, template, 'area');
   return null;
 }
@@ -97,17 +113,20 @@ export function guideFromText(plan: PlanId, shop: Shop, text: string): GuideTurn
 function openFlow(plan: PlanId, template: NicheTemplate, flowId: string): GuideTurn | null {
   const chip = [...PAINT_CHIPS, ...JUKU_CHIPS, ...SEITAI_CHIPS].find((item) => item.id === `flow:${flowId}`);
   const userText = chip?.label ?? '質問';
-  if (plan === 'light') {
-    const bot = lightAnswer(template, flowId);
+  if (plan === 'light' || !isWizard(flowId)) {
+    const bot = (plan === 'light' ? lightAnswer(template, flowId) : null) ?? directAnswer(template, flowId);
     return bot ? { guide: null, userText, bot } : null;
   }
-  if (flowId === 'price' && template.id === 'juku') return { guide: null, userText, bot: jukuPrice(template) };
-  if (flowId === 'price' && template.id === 'seitai') return { guide: null, userText, bot: seitaiPrice(template) };
-  if (flowId === 'trial') return { guide: null, userText, bot: jukuTrial(template) };
-  if (flowId === 'visit') return { guide: null, userText, bot: seitaiVisit(template) };
   const first = firstStep(template, flowId);
-  if (!first) return null;
+  if (!first) {
+    const bot = directAnswer(template, flowId);
+    return bot ? { guide: null, userText, bot } : null;
+  }
   return { guide: { flowId, answers: {} }, userText, bot: first };
+}
+
+function isWizard(flowId: string): boolean {
+  return flowId === 'cost' || flowId === 'course' || flowId === 'area' || flowId === 'symptom' || flowId === 'process';
 }
 
 function advance(
@@ -243,6 +262,83 @@ function lightAnswer(template: NicheTemplate, flowId: string): BotMessage | null
   return null;
 }
 
+function directAnswer(template: NicheTemplate, flowId: string): BotMessage | null {
+  if (template.id === 'painting') {
+    if (flowId === 'survey') {
+      return withBooking(template, [
+        'お見積りは無料です。ほかの会社と比べている段階でも構いません。',
+        '見積り後に断っても大丈夫です。',
+        'しつこい営業電話はしません。',
+        '正確な金額には現地を見る必要があります。外壁と屋根の全体なら、30〜40分程度が目安です。',
+      ], '無料の現地調査を予約する');
+    }
+    if (flowId === 'schedule') {
+      return withBooking(template, [
+        '天候により、外壁のみで10日前後、外壁と屋根で2〜3週間が目安です。',
+        '雨や雪の日は、原則として塗装しません。天候で工期が延びたことだけでは、追加料金をいただかない案内が一般的です。',
+        '日数は、現地調査のあとにお伝えします。',
+      ], '無料の現地調査を予約する');
+    }
+    if (flowId === 'color') {
+      return withBooking(template, [
+        '塗料の種類と色は、外壁の状態とご希望を伺ってからご提案します。',
+        'このチャットでは色を確定しません。見本は、現地調査のときに一緒に見られます。',
+      ], '無料の現地調査を予約する');
+    }
+    if (flowId === 'warranty') {
+      return withBooking(template, [
+        '保証の年数は、塗料と工事の内容で違います。年数は見積書に書きます。',
+        '施工後の点検があるかどうかも、見積りのときにご説明します。',
+      ], '無料の現地調査を予約する');
+    }
+    if (flowId === 'living') {
+      return withBooking(template, [
+        '工事中は、洗濯物を外に干せないことが多いです。窓は養生のため、開けられない場合があります。',
+        '駐車の置き方は、現地調査のときにご案内します。この見本店の事務所前には、来客用が2台あります。',
+        '着工の前に、近隣へごあいさつに伺います。',
+      ], '無料の現地調査を予約する');
+    }
+    if (flowId === 'book') {
+      return withBooking(template, [
+        '無料の現地調査は、予約ページから申し込めます。',
+        NO_PUSH,
+        'このチャットでは、調査の日時を確定しません。',
+      ], '無料の現地調査を予約する');
+    }
+  }
+  if (template.id === 'juku') {
+    if (flowId === 'price') return jukuPrice(template);
+    if (flowId === 'trial' || flowId === 'book') return jukuTrial(template);
+    if (flowId === 'timetable') {
+      return withBooking(template, [
+        '曜日と時間は、部活や習い事と両立できるよう、体験のときに希望を伺います。',
+        '教科は希望から始められ、途中の変更も相談できます。',
+      ], '無料体験を予約する');
+    }
+    if (flowId === 'makeup') {
+      return withBooking(template, [
+        'この教室では、前日までのご連絡で、同じ月の空き枠へ振り替えできます。',
+        '当日の欠席は、お電話ください。',
+      ], '無料体験を予約する');
+    }
+    if (flowId === 'exam') {
+      return withBooking(template, [
+        '通っている学校の進度や、定期テストの範囲に合わせた学習ができます。',
+        '受験に向けたコースもあります。成績や合格は保証しません。',
+      ], '無料体験を予約する');
+    }
+  }
+  if (template.id === 'seitai') {
+    if (flowId === 'first') return seitaiFirst(template);
+    if (flowId === 'price') return seitaiPrice(template);
+    if (flowId === 'clothes') return seitaiClothes(template);
+    if (flowId === 'cancel') return seitaiCancel(template);
+    if (flowId === 'insurance') return seitaiInsurance(template);
+    if (flowId === 'book') return seitaiVisit(template);
+  }
+  return null;
+}
+
 function paintResult(template: NicheTemplate, answers: Record<string, string>): BotMessage {
   const estimate = estimatePainting(template, answers);
   return withBooking(template, [estimate.text, NO_PUSH], template.shop.reservationLabel);
@@ -294,10 +390,14 @@ function jukuPrice(template: NicheTemplate): BotMessage {
     return `${GRADE_LABEL[grade]} ${formatYen(span.min)}〜${formatYen(span.max)}／月（税込）`;
   }).filter(Boolean);
   return message(
-    ['月額の目安です。学年と目的が決まっていれば、コースをご案内します。', ...lines],
     [
-      { id: 'flow:course', label: '学年・目的に合うコースを知りたい' },
-      { id: 'flow:trial', label: '無料体験を申し込みたい' },
+      '授業料は、学年・週の回数・学習プランで異なります。',
+      '授業料以外に、教材費がかかる場合があります。入会の可否を決める選抜テストは行いません。',
+      ...lines,
+    ],
+    [
+      { id: 'flow:course', label: '学年・教科・通う回数' },
+      { id: 'flow:book', label: '無料体験を予約する' },
       homeButton(),
     ],
   );
@@ -306,7 +406,11 @@ function jukuPrice(template: NicheTemplate): BotMessage {
 function jukuTrial(template: NicheTemplate): BotMessage {
   return withBooking(
     template,
-    ['無料体験は、予約ページから申し込めます。希望の曜日と時間は、そのページで選べます。', 'このチャットでは体験を確定しません。'],
+    [
+      '入会を決めていなくても大丈夫です。',
+      '授業の進め方を見る無料体験と、学習相談をご用意しています。所要時間は教室によります。',
+      'このチャットでは体験を確定しません。',
+    ],
     '無料体験を予約する',
   );
 }
@@ -353,15 +457,45 @@ function areaResult(template: NicheTemplate, optionId: string): BotMessage {
   return guardSeitai(bot);
 }
 
+function seitaiFirst(template: NicheTemplate): BotMessage {
+  return withBooking(template, [
+    'ご予約のあと、初回は10分ほど早めにお越しください。問診票を書いていただきます。',
+    '更衣室で動きやすい服装に着替え、お話を伺ってから施術し、最後にお会計です。',
+    '医療機関ではありません。感じ方には個人差があります。',
+  ], '予約ページを開く');
+}
+
+function seitaiClothes(template: NicheTemplate): BotMessage {
+  return withBooking(template, [
+    '動きやすい薄手の服装が案内しやすいです。',
+    '更衣室と、貸し出しがあります。普段の服装のままで来て、着替えてから施術できます。',
+  ], '予約ページを開く');
+}
+
+function seitaiCancel(template: NicheTemplate): BotMessage {
+  return withBooking(template, [
+    '現金と、主なクレジットカードが使えます。',
+    'この院では、前日までのご連絡ならキャンセル料をいただきません。当日はお電話ください。',
+    '予約の確定は予約ページで行います。このチャットでは確定しません。',
+  ], '予約ページを開く');
+}
+
+function seitaiInsurance(template: NicheTemplate): BotMessage {
+  return withBooking(template, [
+    '医療機関ではなく整体のため、医療保険の対象外です。',
+    '健康保険証は不要です。全額自費になります。',
+  ], '予約ページを開く');
+}
+
 function seitaiPrice(template: NicheTemplate): BotMessage {
   const first = template.seitai?.firstVisit;
   const bot = message(
     [
       first ? `${first.name}は${first.minutes}分、${formatYen(first.priceTaxIn)}（税込）です。` : '初回料金は予約ページに記載しています。',
       '通う間隔は、ご希望を伺ったうえでご相談ください。このチャットでは回数を決めません。',
-      '整体は保険の対象外で、全額自費になります。',
+      '医療機関ではありません。感じ方には個人差があります。',
     ],
-    [{ id: 'flow:area', label: 'つらい場所からメニューを選びたい' }, homeButton()],
+    [{ id: 'flow:area', label: '気になる箇所からコースを見る' }, homeButton()],
   );
   bot.links = [{ href: bookingHref(template.shop), label: '予約ページを開く' }];
   return guardSeitai(bot);
@@ -374,7 +508,8 @@ function seitaiVisit(template: NicheTemplate): BotMessage {
       `営業時間：${shop.hours}`,
       `定休日：${shop.closedDays}`,
       shop.extra.lastBooking ?? '',
-      '予約は予約ページからどうぞ。このチャットでは確定しません。',
+      '空きは予約ページでご確認ください。このチャットでは空きを確定しません。',
+      '医療機関ではありません。',
       `電話：${shop.phone}`,
     ].filter(Boolean),
     [homeButton()],

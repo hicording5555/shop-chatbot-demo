@@ -5,10 +5,10 @@ import { FOOTER_NOTE } from '../content/service';
 import { el } from './dom';
 
 const NAV: [string, string][] = [
-  ['/', 'トップ'],
-  ['/plans', 'プランと料金'],
-  ['/flow', '導入の流れ'],
-  ['/faq', 'よくある質問'],
+  ['/#demo', 'デモ'],
+  ['/#reasons', '選ばれる理由'],
+  ['/#plans', '料金'],
+  ['/#faq', 'よくある質問'],
 ];
 
 /** 通常色のロゴ。縮小したファイルだけを置く。外部URLからは読み込まない。 */
@@ -26,7 +26,7 @@ export function arkLogo(): HTMLAnchorElement {
 
 export function routeTitle(name: Route['name']): string {
   const titles: Record<Route['name'], string> = {
-    landing: '夜の「いくらかかる？」に、目安を返します｜ARK',
+    landing: 'ホームページが先に答えます｜ARK',
     plans: 'プランと料金｜ARK',
     flow: '導入の流れ｜ARK',
     faq: 'よくある質問｜ARK',
@@ -80,10 +80,13 @@ export function masthead(current: string): HTMLElement {
     el('div', { class: 'wrap masthead-inner' }, [
       el('div', { class: 'brand-block' }, [
         arkLogo(),
-        el('a', { class: 'corp-link', href: corporateHome(), target: '_blank', rel: 'noopener noreferrer' }, ['コーポレートサイトへ']),
+        el('div', { class: 'brand-meta' }, [
+          el('span', { class: 'service-label' }, ['ホームページ受付']),
+          el('a', { class: 'corp-link', href: corporateHome(), target: '_blank', rel: 'noopener noreferrer' }, ['コーポレートサイト']),
+        ]),
       ]),
       nav,
-      el('a', { class: 'button header-cta', href: '/consult' }, ['相談・申し込み']),
+      el('a', { class: 'button header-cta', href: '/consult' }, ['無料デモ相談・お申し込み']),
       toggle,
     ]),
   ]);

@@ -41,19 +41,27 @@ describe('signup site', () => {
     const view = landingView();
     const headings = Array.from(view.querySelectorAll('h1, h2')).map((node) => node.textContent);
     expect(headings).toEqual([
-      '夜の「いくらかかる？」に、目安を返します',
-      '電話に出られない時間があります',
-      'その場で動かせます',
+      '電話に出られない時間に、ホームページが先に答えます',
+      '今すぐ、3業種を切り替えられます',
+      'こんなお悩みはありませんか？',
+      '導入後に変わること',
+      '3つの業種で、そのまま試せます',
       '料金',
       '導入は3ステップです',
       'よくある質問',
-      'フォームから相談を送れます',
+      'まずは、自社の業種で動かしてみてください',
     ]);
-    expect(view.textContent).toContain('外壁塗装、学習塾、整体院のホームページに載せる、選択式の受付です。');
+    expect(view.textContent).toContain('オーナーが電話に出られない時間に、用意した質問へ用意した答えを返します。');
+    expect(view.textContent).toContain('初期費用 0円');
+    expect(view.textContent).toContain('選択式で誤回答なし');
+    expect(view.querySelector('a[href="/demo/painting"]')).not.toBeNull();
+    expect(view.querySelector('a[href="/demo/juku"]')).not.toBeNull();
+    expect(view.querySelector('a[href="/demo/seitai"]')).not.toBeNull();
+    expect(view.querySelector('.header-cta')?.textContent).toBe('無料デモ相談・お申し込み');
     expect(view.textContent).not.toContain('飲食店・美容室・整体院');
     expect(view.textContent).not.toContain('美容室・サロン');
     const industries = Array.from(view.querySelectorAll('[aria-label="業種"] button')).map((node) => node.textContent);
-    expect(industries).toEqual(['外壁・屋根塗装', '学習塾', '整体院']);
+    expect(industries).toEqual(['外壁・屋根塗装', '学習塾', '自費の整体院']);
     for (const tab of DEMO_INDUSTRIES) {
       expect(templateByNiche(tab.id).shop.slug).toBe(tab.slug);
     }
@@ -89,13 +97,13 @@ describe('signup site', () => {
     const expand = view.querySelector('.demo-expand');
     expect(expand?.textContent).toBe('別ページで大きく見る');
     expect(expand?.getAttribute('href')).toBe('/demo/painting');
-    expect(view.textContent).toContain('このテンプレートを自社サイトに導入する');
+    expect(view.textContent).toContain('この業種テンプレートで自社デモを相談する');
     expect(frames[0]?.parentElement?.contains(expand)).toBe(false);
     expect(view.textContent).toContain('実在のお店とは関係ありません');
     expect(view.textContent).toContain('いまは未実装です');
     expect(view.textContent).toContain(REPLY_WINDOW);
     const nav = Array.from(view.querySelectorAll('.nav a')).map((node) => node.getAttribute('href'));
-    expect(nav).toEqual(['/', '/plans', '/flow', '/faq']);
+    expect(nav).toEqual(['/#demo', '/#reasons', '/#plans', '/#faq']);
     expect(view.querySelectorAll('.nav a[href="/consult"]')).toHaveLength(0);
     expect(view.querySelectorAll('.header-cta')).toHaveLength(1);
     expect(view.querySelector('a[href="/admin"]')).toBeNull();
@@ -208,6 +216,9 @@ describe('signup site', () => {
     }
     const html = readFileSync('index.html', 'utf8');
     expect(html).toMatch(/<meta\s+name="robots"\s+content="noindex,\s*nofollow"\s*\/>/);
+    expect(html).toContain('fonts.googleapis.com');
+    expect(html).toContain('family=Inter:wght@500;600;700');
+    expect(html).toContain('family=Noto+Sans+JP:wght@400;500;700');
     expect(html).toContain('name="description"');
     expect(html).toContain('property="og:title"');
     expect(html).toContain('property="og:image"');
