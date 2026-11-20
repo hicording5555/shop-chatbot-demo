@@ -18,7 +18,6 @@ const BANNED = [
   '間違った案内をする心配がありません',
   '24時間対応',
   'その場で必ず答える',
-  '取りこぼし',
   '確実に',
   '効率が何倍',
   '電話が半分',
@@ -33,7 +32,6 @@ const BANNED = [
   '治る',
   '改善する',
   '効果がある',
-  'おすすめ',
 ];
 
 describe('signup site', () => {
@@ -41,23 +39,27 @@ describe('signup site', () => {
     const view = landingView();
     const headings = Array.from(view.querySelectorAll('h1, h2')).map((node) => node.textContent);
     expect(headings).toEqual([
-      '電話に出られない時間に、ホームページが先に答えます',
+      '電話に出られない時間の問い合わせ、ホームページ上で自動受付',
       '今すぐ、3業種を切り替えられます',
-      'こんなお悩みはありませんか？',
-      '導入後に変わること',
-      '3つの業種で、そのまま試せます',
-      '料金',
-      '導入は3ステップです',
+      '業種ごとの受付を、その場でお試しください',
+      '電話に出られない時間も、問い合わせを取りこぼさない',
+      '初期費用 0円。月額 10,780円（税込）から',
+      '導入までの流れ',
       'よくある質問',
-      'まずは、自社の業種で動かしてみてください',
+      'まずは、動く実物をご覧ください',
     ]);
-    expect(view.textContent).toContain('オーナーが電話に出られない時間に、用意した質問へ用意した答えを返します。');
+    expect(view.textContent).toContain('選択式で用意した答えだけを返すので、文面がぶれません。');
     expect(view.textContent).toContain('初期費用 0円');
-    expect(view.textContent).toContain('選択式で誤回答なし');
+    expect(view.textContent).toContain('おすすめ');
+    expect(view.textContent).not.toContain('予約フォーム連携');
+    expect(view.textContent).not.toContain('対話履歴');
+    expect(view.textContent).not.toContain('優先サポート');
     expect(view.querySelector('a[href="/demo/painting"]')).not.toBeNull();
     expect(view.querySelector('a[href="/demo/juku"]')).not.toBeNull();
     expect(view.querySelector('a[href="/demo/seitai"]')).not.toBeNull();
-    expect(view.querySelector('.header-cta')?.textContent).toBe('無料デモ相談・お申し込み');
+    expect(view.querySelector('.header-cta')?.textContent).toBe('導入相談をする');
+    expect(view.querySelector('.device-stage')).not.toBeNull();
+    expect(view.querySelector('.cta-laptop')).not.toBeNull();
     expect(view.textContent).not.toContain('飲食店・美容室・整体院');
     expect(view.textContent).not.toContain('美容室・サロン');
     const industries = Array.from(view.querySelectorAll('[aria-label="業種"] button')).map((node) => node.textContent);
@@ -65,13 +67,13 @@ describe('signup site', () => {
     for (const tab of DEMO_INDUSTRIES) {
       expect(templateByNiche(tab.id).shop.slug).toBe(tab.slug);
     }
-    const logos = Array.from(view.querySelectorAll('img'));
+    const logos = Array.from(view.querySelectorAll('img.brand-logo'));
     expect(logos.length).toBeGreaterThan(0);
     for (const logo of logos) {
       expect(logo.getAttribute('alt')).toBe('ARK');
       expect(logo.getAttribute('src')).toBe('/brand/ark-logo.webp');
     }
-    expect(view.querySelectorAll('a[aria-label="ARK ホーム"]')).toHaveLength(2);
+    expect(view.querySelectorAll('a[aria-label="ARK ホーム"]')).toHaveLength(1);
     for (const plan of SERVICE_PLANS) {
       expect(plan.monthlyTaxIn).toBe(Math.round(plan.monthlyTaxEx * 1.1));
       expect(plan.termTotalTaxIn).toBe(plan.monthlyTaxIn * CONTRACT_MONTHS);
@@ -89,7 +91,7 @@ describe('signup site', () => {
     const standardTab = Array.from(view.querySelectorAll('[aria-label="プラン"] button')).find((node) => node.textContent === '標準');
     expect(standardTab?.getAttribute('aria-selected')).toBe('true');
     expect(view.textContent).not.toContain('デモで最初に表示するプラン');
-    expect(view.textContent).not.toContain('おすすめ');
+    expect(view.querySelector('.plan-card.is-recommended .recommend-badge')?.textContent).toBe('おすすめ');
     const frames = view.querySelectorAll('iframe');
     expect(frames).toHaveLength(1);
     expect(frames[0]?.getAttribute('loading')).toBe('lazy');
@@ -103,7 +105,7 @@ describe('signup site', () => {
     expect(view.textContent).toContain('いまは未実装です');
     expect(view.textContent).toContain(REPLY_WINDOW);
     const nav = Array.from(view.querySelectorAll('.nav a')).map((node) => node.getAttribute('href'));
-    expect(nav).toEqual(['/#demo', '/#reasons', '/#plans', '/#faq']);
+    expect(nav).toEqual(['/#demo', '/#plans', '/#faq']);
     expect(view.querySelectorAll('.nav a[href="/consult"]')).toHaveLength(0);
     expect(view.querySelectorAll('.header-cta')).toHaveLength(1);
     expect(view.querySelector('a[href="/admin"]')).toBeNull();
@@ -217,8 +219,8 @@ describe('signup site', () => {
     const html = readFileSync('index.html', 'utf8');
     expect(html).toMatch(/<meta\s+name="robots"\s+content="noindex,\s*nofollow"\s*\/>/);
     expect(html).toContain('fonts.googleapis.com');
-    expect(html).toContain('family=Inter:wght@500;600;700');
-    expect(html).toContain('family=Noto+Sans+JP:wght@400;500;700');
+    expect(html).toContain('family=Inter:wght@600;700;800');
+    expect(html).toContain('family=Noto+Sans+JP:wght@400;500;700;900');
     expect(html).toContain('name="description"');
     expect(html).toContain('property="og:title"');
     expect(html).toContain('property="og:image"');

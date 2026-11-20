@@ -6,9 +6,8 @@ import { el } from './dom';
 
 const NAV: [string, string][] = [
   ['/#demo', 'デモ'],
-  ['/#reasons', '選ばれる理由'],
   ['/#plans', '料金'],
-  ['/#faq', 'よくある質問'],
+  ['/#faq', 'FAQ'],
 ];
 
 /** 通常色のロゴ。縮小したファイルだけを置く。外部URLからは読み込まない。 */
@@ -26,7 +25,7 @@ export function arkLogo(): HTMLAnchorElement {
 
 export function routeTitle(name: Route['name']): string {
   const titles: Record<Route['name'], string> = {
-    landing: 'ホームページが先に答えます｜ARK',
+    landing: '電話に出られない時間の問い合わせを、ホームページで受付｜ARK',
     plans: 'プランと料金｜ARK',
     flow: '導入の流れ｜ARK',
     faq: 'よくある質問｜ARK',
@@ -78,15 +77,12 @@ export function masthead(current: string): HTMLElement {
   });
   return el('header', { class: 'masthead' }, [
     el('div', { class: 'wrap masthead-inner' }, [
-      el('div', { class: 'brand-block' }, [
-        arkLogo(),
-        el('div', { class: 'brand-meta' }, [
-          el('span', { class: 'service-label' }, ['ホームページ受付']),
-          el('a', { class: 'corp-link', href: corporateHome(), target: '_blank', rel: 'noopener noreferrer' }, ['コーポレートサイト']),
-        ]),
+      el('a', { class: 'wordmark', href: '/', 'aria-label': '受付ボット ホーム' }, [
+        el('span', { class: 'wordmark-name' }, ['受付ボット']),
+        el('span', { class: 'wordmark-host' }, ['bot.arktechlab.com']),
       ]),
       nav,
-      el('a', { class: 'button header-cta', href: '/consult' }, ['無料デモ相談・お申し込み']),
+      el('a', { class: 'button header-cta', href: '/consult' }, ['導入相談をする']),
       toggle,
     ]),
   ]);

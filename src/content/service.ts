@@ -151,11 +151,11 @@ export const TERMS_HEADINGS = [
   '準拠法',
 ];
 
-export const HERO_EYEBROW = '外壁塗装・学習塾・自費の整体院向け';
+export const HERO_EYEBROW = '外壁塗装・学習塾・整体院向け';
 
-export const HERO_TITLE = '電話に出られない時間に、ホームページが先に答えます';
+export const HERO_TITLE = '電話に出られない時間の問い合わせ、ホームページ上で自動受付';
 
-export const HERO_BODY = 'オーナーが電話に出られない時間に、用意した質問へ用意した答えを返します。選択式なので、文面がぶれません。';
+export const HERO_BODY = '外壁塗装・学習塾・整体院向け。選択式で用意した答えだけを返すので、文面がぶれません。';
 
 export const HERO_NOTES = [
   '返信の目安は通常【〇営業日】以内です。いまは自動返信メールは送りません。',
@@ -171,22 +171,37 @@ export const PROBLEMS: { title: string; body: string }[] = [
   { title: '施術中は手が離せない', body: '整体は施術のあいだ、初めての方の「流れは？」「保険は使える？」にその場で答えられません。' },
 ];
 
-export const BENEFITS: { title: string; body: string }[] = [
-  { title: '営業時間外でも、用意した答えを返せます', body: '夜や定休日でも、公開している質問にはその場で答えます。人が出られる時間を、個別の相談に使えます。' },
-  { title: '選択式なので、文面がぶれません', body: '自由に文章を作りません。お店が用意した答えだけを返します。整体では、効能の約束を入れません。' },
-  { title: '予約は、いまのページへ案内します', body: 'ボットの中では予約を確定しません。すでにある予約ページか電話へ案内します。' },
+export const SHIFTS: { step: string; title: string; before: string; after: string }[] = [
+  {
+    step: '01',
+    title: '機会損失の削減',
+    before: '営業時間外や仕事中に電話へ出られず、見積りや体験の相談が残ります。',
+    after: 'ホームページ上で用意した質問に答え、相談へつなぎます。',
+  },
+  {
+    step: '02',
+    title: '見積り・体験前の不安解消',
+    before: '料金や工事、体験の前に不安が残ると、ページを閉じてしまいます。',
+    after: 'よくある質問にその場で答え、次の一歩へ進めます。',
+  },
+  {
+    step: '03',
+    title: '営業電話への心理的ハードル低減',
+    before: '問い合わせのあと、しつこい営業電話が来そうで足が止まります。',
+    after: 'チャットで先に確認できるので、問い合わせの第一歩が軽くなります。',
+  },
 ];
 
-export const INDUSTRY_CARDS: { href: string; title: string; body: string }[] = [
-  { href: '/demo/painting', title: '外壁・屋根塗装', body: '費用の目安から、無料の現地調査の予約まで。工期、塗料、工事中の生活も案内します。' },
-  { href: '/demo/juku', title: '学習塾', body: '授業料、体験、学年と回数、振替、テスト対策を案内し、無料体験の予約へ進みます。' },
-  { href: '/demo/seitai', title: '自費の整体院', body: '当日の流れ、料金、服装、保険の対象外であることを案内し、予約ページへ進みます。' },
+export const INDUSTRY_CARDS: { href: string; title: string; quote: string; body: string; cta: string; icon: 'paint' | 'book' | 'care' }[] = [
+  { href: '/demo/painting', title: '外壁・屋根塗装', quote: '外壁塗装っていくらくらい？', body: '概算、現地調査、工期・天候、塗料・色など、よくある質問に答えます。', cta: '塗装のデモを見る', icon: 'paint' },
+  { href: '/demo/juku', title: '学習塾', quote: '無料体験はできますか？', body: '授業料、体験授業、振替、テスト・受験対策などを案内します。', cta: '塾のデモを見る', icon: 'book' },
+  { href: '/demo/seitai', title: '自費整体院', quote: '初めてですが服装は？', body: '初回の流れ、料金・時間、着替え、予約・キャンセルなどを案内します。', cta: '整体院のデモを見る', icon: 'care' },
 ];
 
 export const ONBOARDING: { step: string; title: string; body: string }[] = [
-  { step: '01', title: 'ご相談・ヒアリング', body: 'フォームから、業種とホームページのURLを送ります。この送信では決済しません。' },
-  { step: '02', title: '自社内容へテンプレート調整', body: '会社名、料金、営業時間、予約URLを、業種テンプレートに合わせて整えます。' },
-  { step: '03', title: 'ホームページへ設置・公開', body: 'タグをホームページに置きます。訪問しての設定はしません。' },
+  { step: '01', title: 'デモを試す', body: '業種テンプレートの動きを、その場で確認できます。' },
+  { step: '02', title: '自社向けに調整', body: '質問・回答と料金表を、実際の業務に合わせます。' },
+  { step: '03', title: 'サイトに公開', body: 'ホームページへ設置し、受付を開始できます。' },
 ];
 
 export const HOME_FAQ: { question: string; answer: string }[] = [

@@ -5,13 +5,10 @@ import {
   DELIVERY_DAYS,
   DEMO_INDUSTRIES,
   DEMO_PLAN_ID,
-  BENEFITS,
-  FACTS,
   FAQ_ITEMS,
   FICTIONAL_SHOP,
   FUTURE_CHANGES,
   HERO_BODY,
-  HERO_EYEBROW,
   HERO_TITLE,
   HOME_FAQ,
   INDUSTRY_CARDS,
@@ -20,8 +17,8 @@ import {
   LEGAL_ITEMS,
   NOT_INCLUDED,
   PRICE_FOOTNOTE,
-  PROBLEMS,
   REPLY_WINDOW,
+  SHIFTS,
   SERVICE_PLANS,
   TERMS_HEADINGS,
   UNDECIDED,
@@ -30,6 +27,7 @@ import {
   yen,
   type ServicePlan,
 } from '../content/service';
+import laptopUrl from '../assets/cta-laptop-dark.jpg';
 import { el } from './dom';
 import { pageShell } from './site-chrome';
 
@@ -37,9 +35,8 @@ export function landingView(): HTMLElement {
   return pageShell('/', [
     hero(),
     demoSection(),
-    problemSection(),
-    benefitSection(),
     industrySection(),
+    shiftSection(),
     plansSection(true),
     flowSummary(),
     faqSummary(),
@@ -134,71 +131,74 @@ export function termsView(): HTMLElement {
 }
 
 function hero(): HTMLElement {
+  const [lead, rest] = HERO_TITLE.split('、');
   return el('section', { class: 'hero' }, [
     el('div', { class: 'wrap hero-grid' }, [
       el('div', { class: 'hero-copy' }, [
-        el('p', { class: 'eyebrow' }, [HERO_EYEBROW]),
-        el('h1', null, [`${HERO_TITLE.split('、')[0]}、`, el('br', null), HERO_TITLE.split('、')[1] ?? '']),
+        el('p', { class: 'offer-pill' }, ['初期費用 0円・月額 10,780円（税込）〜']),
+        el('h1', null, [`${lead}、`, el('br', null), rest ?? '']),
         el('p', { class: 'lede' }, [HERO_BODY]),
-        el('ul', { class: 'facts' }, FACTS.map((fact) => el('li', null, [fact]))),
         el('div', { class: 'cta-row' }, [
-          el('a', { class: 'button', href: '#demo' }, ['まずはデモを試す']),
-          el('a', { class: 'button ghost', href: '/consult' }, ['導入を相談する']),
+          el('a', { class: 'button', href: '#demo' }, ['デモを試す']),
+          el('a', { class: 'button ghost', href: '/consult' }, ['導入相談をする']),
         ]),
+        el('p', { class: 'hero-note' }, ['今すぐサイト上で動く実物デモをご覧いただけます。']),
       ]),
-      heroPreview(),
+      deviceStage(),
     ]),
   ]);
 }
 
-function heroPreview(): HTMLElement {
-  return el('aside', { class: 'preview-card', 'aria-label': '画面の見本' }, [
-    el('p', { class: 'preview-kicker' }, ['画面の見本・外壁塗装']),
-    el('p', { class: 'preview-shop' }, ['あおば塗装（架空）']),
-    el('div', { class: 'preview-log' }, [
-      el('p', { class: 'preview-user' }, ['費用の目安を知りたいです']),
-      el('div', { class: 'preview-bot' }, [
-        el('p', null, ['建物の種類を選んでください。戸建て2階、26〜35坪、サイディング、外壁だけ、で進めます。']),
-        el('p', { class: 'preview-price' }, ['外壁の目安は78万〜108万円（税込）']),
-        el('p', null, ['正確な金額は無料の現地調査で確定します。しつこい営業電話はしません。']),
+const MOCK_QUESTIONS = ['外壁塗装っていくらくらい？', '無料体験はできますか？', '初めてですが服装は？'];
+
+function deviceStage(): HTMLElement {
+  return el('div', { class: 'device-stage', 'aria-hidden': 'true' }, [
+    el('div', { class: 'browser-window' }, [
+      el('div', { class: 'browser-bar' }, [
+        el('span', null, ['受付ボット']),
+        el('span', { class: 'browser-controls' }, ['—  ×']),
       ]),
+      el('p', { class: 'mock-lead' }, ['ご用件を以下からお選びください。']),
+      ...MOCK_QUESTIONS.map((label) => el('div', { class: 'mock-choice' }, [label])),
     ]),
-    el('p', { class: 'preview-note' }, ['架空の店です。下のデモで、同じ流れを選べます。']),
-  ]);
-}
-
-function problemSection(): HTMLElement {
-  return el('section', { class: 'block', id: 'problems' }, [
-    el('div', { class: 'wrap' }, [
-      el('h2', null, ['こんなお悩みはありませんか？']),
-      el('div', { class: 'issue-grid' }, PROBLEMS.map((item) => el('article', { class: 'panel issue-card' }, [
-        el('h3', null, [item.title]),
-        el('p', null, [item.body]),
-      ]))),
-    ]),
-  ]);
-}
-
-function benefitSection(): HTMLElement {
-  return el('section', { class: 'block band', id: 'reasons' }, [
-    el('div', { class: 'wrap' }, [
-      el('h2', null, ['導入後に変わること']),
-      el('div', { class: 'issue-grid' }, BENEFITS.map((item) => el('article', { class: 'panel issue-card' }, [
-        el('h3', null, [item.title]),
-        el('p', null, [item.body]),
-      ]))),
+    el('div', { class: 'phone' }, [
+      el('div', { class: 'phone-notch' }, []),
+      el('div', { class: 'phone-bar' }, ['受付ボット']),
+      el('p', { class: 'mock-lead' }, ['ご用件を以下からお選びください。']),
+      ...MOCK_QUESTIONS.map((label) => el('div', { class: 'mock-choice' }, [label])),
     ]),
   ]);
 }
 
 function industrySection(): HTMLElement {
-  return el('section', { class: 'block', id: 'industries' }, [
+  return el('section', { class: 'block band', id: 'industries' }, [
     el('div', { class: 'wrap' }, [
-      el('h2', null, ['3つの業種で、そのまま試せます']),
-      el('div', { class: 'issue-grid' }, INDUSTRY_CARDS.map((item) => el('a', { class: 'industry-card', href: item.href }, [
+      el('p', { class: 'eyebrow' }, ['実物デモ']),
+      el('h2', null, ['業種ごとの受付を、その場でお試しください']),
+      el('div', { class: 'issue-grid' }, INDUSTRY_CARDS.map((item) => el('article', { class: 'industry-card' }, [
+        icon(item.icon),
         el('h3', null, [item.title]),
+        el('p', { class: 'industry-quote' }, [`「${item.quote}」`]),
         el('p', null, [item.body]),
-        el('span', { class: 'industry-go' }, ['デモを開く →']),
+        el('a', { class: 'button industry-cta', href: item.href }, [item.cta]),
+      ]))),
+    ]),
+  ]);
+}
+
+function shiftSection(): HTMLElement {
+  return el('section', { class: 'block', id: 'reasons' }, [
+    el('div', { class: 'wrap' }, [
+      el('p', { class: 'eyebrow' }, ['導入後に変わること']),
+      el('h2', null, ['電話に出られない時間も、問い合わせを取りこぼさない']),
+      el('div', { class: 'issue-grid' }, SHIFTS.map((item) => el('article', { class: 'shift-card' }, [
+        el('div', { class: 'shift-head' }, [
+          el('span', { class: 'shift-no' }, [item.step]),
+          el('h3', null, [item.title]),
+        ]),
+        el('div', { class: 'shift-before' }, [el('p', null, [item.before])]),
+        el('div', { class: 'shift-arrow', 'aria-hidden': 'true' }, ['↓']),
+        el('p', { class: 'shift-after' }, [item.after]),
       ]))),
     ]),
   ]);
@@ -207,7 +207,7 @@ function industrySection(): HTMLElement {
 function plansSection(onHome: boolean): HTMLElement {
   return el('section', { class: 'block', id: 'plans' }, [
     el('div', { class: 'wrap' }, [
-      ...(onHome ? [el('h2', null, ['料金'])] : []),
+      ...(onHome ? [priceHero()] : []),
       el('div', { class: 'plan-grid' }, SERVICE_PLANS.map((plan) => planCard(plan))),
       el('div', { class: 'compare-scroll' }, [compareTable()]),
       el('p', { class: 'price-footnote' }, [
@@ -226,9 +226,26 @@ function plansSection(onHome: boolean): HTMLElement {
   ]);
 }
 
+function priceHero(): HTMLElement {
+  const light = SERVICE_PLANS[0];
+  const digits = String(light?.monthlyTaxIn ?? 0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return el('div', { class: 'price-hero-block' }, [
+    el('p', { class: 'eyebrow' }, ['料金']),
+    el('h2', { class: 'price-hero' }, [
+      '初期費用 ',
+      el('span', { class: 'num' }, ['0']),
+      '円。月額 ',
+      el('span', { class: 'num' }, [digits]),
+      '円（税込）から',
+    ]),
+    el('p', { class: 'price-hero-note' }, ['プランは3つ。12か月の合計も、月額と同じ大きさで並記しています。']),
+  ]);
+}
+
 function planCard(plan: ServicePlan): HTMLElement {
-  return el('article', { class: 'plan-card' }, [
-    el('p', { class: 'fee-badge' }, ['初期費用 0円']),
+  const featured = plan.id === DEMO_PLAN_ID;
+  return el('article', { class: featured ? 'plan-card is-recommended' : 'plan-card' }, [
+    ...(featured ? [el('p', { class: 'recommend-badge' }, ['おすすめ'])] : []),
     el('h3', null, [plan.name]),
     el('p', { class: 'audience' }, [plan.audience]),
     el('p', { class: 'price' }, [`月額 ${yen(plan.monthlyTaxIn)}（税込）`]),
@@ -334,7 +351,7 @@ function adminPreview(): HTMLElement {
 function flowSummary(): HTMLElement {
   return el('section', { class: 'block', id: 'flow' }, [
     el('div', { class: 'wrap' }, [
-      el('h2', null, ['導入は3ステップです']),
+      el('h2', null, ['導入までの流れ']),
       el('ol', { class: 'steps onboarding' }, ONBOARDING.map((item) => el('li', null, [
         el('span', { class: 'step-no' }, [item.step]),
         el('strong', null, [item.title]),
@@ -425,13 +442,29 @@ function faqAnswer(question: string, answer: string): (Node | string)[] {
 
 function closing(): HTMLElement {
   return el('section', { class: 'closing' }, [
+    el('img', {
+      class: 'cta-laptop',
+      src: laptopUrl,
+      alt: '暗い机の上で開いたノートPC',
+    }),
     el('div', { class: 'wrap closing-inner' }, [
-      el('h2', null, ['まずは、自社の業種で動かしてみてください']),
-      el('p', null, ['デモの店名と料金は架空です。導入のご相談はフォームから。この送信では決済しません。']),
+      el('h2', null, ['まずは、', el('br', null), '動く実物をご覧ください']),
+      el('p', null, ['初期費用 0円。月額 10,780円（税込）から始められます。この送信では決済しません。']),
       el('div', { class: 'cta-row' }, [
-        el('a', { class: 'button closing-button', href: '/consult' }, ['無料デモ相談・お申し込み']),
-        el('a', { class: 'closing-link', href: '#demo' }, ['デモに戻る']),
+        el('a', { class: 'button', href: '#demo' }, ['デモを試す']),
+        el('a', { class: 'button ghost closing-ghost', href: '/consult' }, ['導入相談をする']),
       ]),
     ]),
   ]);
+}
+
+function icon(name: 'paint' | 'book' | 'care'): HTMLElement {
+  const paths: Record<typeof name, string> = {
+    paint: '<path d="M8 28V14l16-8 16 8v14" stroke="#1B50C2" stroke-width="2"/><rect x="18" y="20" width="12" height="10" rx="1" stroke="#1B50C2" stroke-width="2"/><path d="M34 34h8v4a4 4 0 0 1-4 4h-2a2 2 0 0 1-2-2v-6z" fill="#EFF6FF" stroke="#1B50C2" stroke-width="2"/>',
+    book: '<path d="M8 12h14a6 6 0 0 1 6 6v20H14a6 6 0 0 0-6 6V12z" fill="#EFF6FF" stroke="#1B50C2" stroke-width="2"/><path d="M40 12H26a6 6 0 0 0-6 6v20h14a6 6 0 0 1 6 6V12z" stroke="#1B50C2" stroke-width="2"/>',
+    care: '<circle cx="24" cy="16" r="6" fill="#EFF6FF" stroke="#1B50C2" stroke-width="2"/><path d="M10 38c2-8 8-12 14-12s12 4 14 12" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/><path d="M30 28c6 1 10 5 12 10" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
+  };
+  const holder = el('span', { class: `duo-icon duo-${name}`, 'aria-hidden': 'true' });
+  holder.innerHTML = `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">${paths[name]}</svg>`;
+  return holder;
 }
