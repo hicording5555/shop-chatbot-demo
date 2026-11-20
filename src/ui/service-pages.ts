@@ -28,12 +28,16 @@ import {
   type ServicePlan,
 } from '../content/service';
 import laptopUrl from '../assets/cta-laptop-dark.jpg';
+import paintingArt from '../assets/industry-painting.jpg';
+import jukuArt from '../assets/industry-juku.jpg';
+import seitaiArt from '../assets/industry-seitai.jpg';
 import { el } from './dom';
 import { pageShell } from './site-chrome';
 
 export function landingView(): HTMLElement {
   return pageShell('/', [
     hero(),
+    howSection(),
     demoSection(),
     industrySection(),
     shiftSection(),
@@ -136,7 +140,10 @@ function hero(): HTMLElement {
     el('div', { class: 'wrap hero-grid' }, [
       el('div', { class: 'hero-copy' }, [
         el('p', { class: 'offer-pill' }, ['初期費用 0円・月額 10,780円（税込）〜']),
-        el('h1', null, [`${lead}、`, el('br', null), rest ?? '']),
+        el('h1', null, [
+          el('span', { class: 'hero-line' }, [`${lead}、`]),
+          el('span', { class: 'hero-line' }, [rest ?? '']),
+        ]),
         el('p', { class: 'lede' }, [HERO_BODY]),
         el('div', { class: 'cta-row' }, [
           el('a', { class: 'button', href: '#demo' }, ['デモを試す']),
@@ -153,19 +160,47 @@ const MOCK_QUESTIONS = ['外壁塗装っていくらくらい？', '無料体験
 
 function deviceStage(): HTMLElement {
   return el('div', { class: 'device-stage', 'aria-hidden': 'true' }, [
+    el('div', { class: 'phone' }, [
+      el('div', { class: 'phone-notch' }, []),
+      el('div', { class: 'phone-bar' }, ['受付ボット']),
+      el('p', { class: 'mock-lead' }, ['質問を選んでください。']),
+      ...MOCK_QUESTIONS.map((label) => el('div', { class: 'mock-choice' }, [label])),
+    ]),
     el('div', { class: 'browser-window' }, [
       el('div', { class: 'browser-bar' }, [
         el('span', null, ['受付ボット']),
         el('span', { class: 'browser-controls' }, ['—  ×']),
       ]),
-      el('p', { class: 'mock-lead' }, ['ご用件を以下からお選びください。']),
-      ...MOCK_QUESTIONS.map((label) => el('div', { class: 'mock-choice' }, [label])),
+      el('p', { class: 'mock-lead' }, ['外壁塗装の概算です。']),
+      el('div', { class: 'mock-reply' }, [
+        el('p', { class: 'mock-price' }, ['78万〜108万円（税込）']),
+        el('p', null, ['戸建て2階・外壁のみ。']),
+        el('p', null, ['足場と高圧洗浄を含みます。']),
+        el('p', null, ['金額は現地調査で確定します。']),
+      ]),
     ]),
-    el('div', { class: 'phone' }, [
-      el('div', { class: 'phone-notch' }, []),
-      el('div', { class: 'phone-bar' }, ['受付ボット']),
-      el('p', { class: 'mock-lead' }, ['ご用件を以下からお選びください。']),
-      ...MOCK_QUESTIONS.map((label) => el('div', { class: 'mock-choice' }, [label])),
+  ]);
+}
+
+function howSection(): HTMLElement {
+  const nodes: { icon: IconName; title: string; body: string }[] = [
+    { icon: 'tap', title: 'お客様が質問を選ぶ', body: '画面のボタンを押すだけです。' },
+    { icon: 'check', title: '用意した答えだけを返答', body: '決めていない文は返しません。' },
+    { icon: 'calendar', title: '既存の予約ページへ案内', body: 'ボットの中では確定しません。' },
+  ];
+  const row = el('div', { class: 'how-row' });
+  nodes.forEach((node, index) => {
+    row.append(el('article', { class: 'how-node' }, [
+      icon(node.icon),
+      el('h3', null, [node.title]),
+      el('p', null, [node.body]),
+    ]));
+    if (index < nodes.length - 1) row.append(el('div', { class: 'how-arrow', 'aria-hidden': 'true' }, ['→']));
+  });
+  return el('section', { class: 'block how', id: 'how' }, [
+    el('div', { class: 'wrap' }, [
+      el('h2', null, ['仕組みは、この3つです']),
+      row,
     ]),
   ]);
 }
@@ -176,7 +211,7 @@ function industrySection(): HTMLElement {
       el('p', { class: 'eyebrow' }, ['実物デモ']),
       el('h2', null, ['業種ごとの受付を、その場でお試しください']),
       el('div', { class: 'issue-grid' }, INDUSTRY_CARDS.map((item) => el('article', { class: 'industry-card' }, [
-        icon(item.icon),
+        el('img', { class: 'industry-art', src: industryArt(item.icon), alt: `${item.title}のイメージ` }),
         el('h3', null, [item.title]),
         el('p', { class: 'industry-quote' }, [`「${item.quote}」`]),
         el('p', null, [item.body]),
@@ -196,9 +231,12 @@ function shiftSection(): HTMLElement {
           el('span', { class: 'shift-no' }, [item.step]),
           el('h3', null, [item.title]),
         ]),
-        el('div', { class: 'shift-before' }, [el('p', null, [item.before])]),
-        el('div', { class: 'shift-arrow', 'aria-hidden': 'true' }, ['↓']),
-        el('p', { class: 'shift-after' }, [item.after]),
+        el('div', { class: 'shift-before' }, [
+          icon(beforeIcon(item.step)),
+          el('p', null, [item.before]),
+        ]),
+        el('div', { class: 'shift-arrow', 'aria-hidden': 'true' }, [el('span', null, ['↓'])]),
+        el('p', { class: 'shift-after' }, [icon(afterIcon(item.step)), item.after]),
       ]))),
     ]),
   ]);
@@ -353,7 +391,10 @@ function flowSummary(): HTMLElement {
     el('div', { class: 'wrap' }, [
       el('h2', null, ['導入までの流れ']),
       el('ol', { class: 'steps onboarding' }, ONBOARDING.map((item) => el('li', null, [
-        el('span', { class: 'step-no' }, [item.step]),
+        el('div', { class: 'step-top' }, [
+          icon(stepIcon(item.step)),
+          el('span', { class: 'step-no' }, [item.step]),
+        ]),
         el('strong', null, [item.title]),
         el('span', { class: 'step-body' }, [item.body]),
       ]))),
@@ -458,11 +499,46 @@ function closing(): HTMLElement {
   ]);
 }
 
-function icon(name: 'paint' | 'book' | 'care'): HTMLElement {
-  const paths: Record<typeof name, string> = {
-    paint: '<path d="M8 28V14l16-8 16 8v14" stroke="#1B50C2" stroke-width="2"/><rect x="18" y="20" width="12" height="10" rx="1" stroke="#1B50C2" stroke-width="2"/><path d="M34 34h8v4a4 4 0 0 1-4 4h-2a2 2 0 0 1-2-2v-6z" fill="#EFF6FF" stroke="#1B50C2" stroke-width="2"/>',
-    book: '<path d="M8 12h14a6 6 0 0 1 6 6v20H14a6 6 0 0 0-6 6V12z" fill="#EFF6FF" stroke="#1B50C2" stroke-width="2"/><path d="M40 12H26a6 6 0 0 0-6 6v20h14a6 6 0 0 1 6 6V12z" stroke="#1B50C2" stroke-width="2"/>',
-    care: '<circle cx="24" cy="16" r="6" fill="#EFF6FF" stroke="#1B50C2" stroke-width="2"/><path d="M10 38c2-8 8-12 14-12s12 4 14 12" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/><path d="M30 28c6 1 10 5 12 10" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
+type IconName = 'tap' | 'check' | 'calendar' | 'missed' | 'worry' | 'hesitate' | 'reply' | 'guide' | 'chat' | 'screen' | 'tune' | 'publish';
+
+function industryArt(iconName: 'paint' | 'book' | 'care'): string {
+  if (iconName === 'book') return jukuArt;
+  if (iconName === 'care') return seitaiArt;
+  return paintingArt;
+}
+
+function beforeIcon(step: string): IconName {
+  if (step === '02') return 'worry';
+  if (step === '03') return 'hesitate';
+  return 'missed';
+}
+
+function afterIcon(step: string): IconName {
+  if (step === '02') return 'guide';
+  if (step === '03') return 'chat';
+  return 'reply';
+}
+
+function stepIcon(step: string): IconName {
+  if (step === '02') return 'tune';
+  if (step === '03') return 'publish';
+  return 'screen';
+}
+
+function icon(name: IconName): HTMLElement {
+  const paths: Record<IconName, string> = {
+    tap: '<rect x="16" y="6" width="16" height="28" rx="3" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M22 34h4" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
+    check: '<path d="M10 16h20a6 6 0 0 1 6 6v8a6 6 0 0 1-6 6H16l-6 6v-6a6 6 0 0 1-0-0" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M16 26l4 4 8-8" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
+    calendar: '<rect x="10" y="12" width="28" height="24" rx="3" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M10 20h28M18 8v8M30 8v8M32 30l6 6" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
+    missed: '<path d="M14 18l20 14M34 18L14 32" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/><rect x="10" y="12" width="28" height="24" rx="6" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/>',
+    worry: '<circle cx="24" cy="24" r="14" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M18 20h.1M30 20h.1M18 30c2-3 10-3 12 0" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
+    hesitate: '<rect x="16" y="8" width="16" height="28" rx="3" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M20 18h8M22 28h4" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
+    reply: '<path d="M8 14h24a6 6 0 0 1 6 6v6a6 6 0 0 1-6 6H16l-8 6v-6" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M16 24l4 4 8-8" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
+    guide: '<circle cx="24" cy="24" r="14" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M24 16v10l6 4" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
+    chat: '<path d="M8 14h28a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H18l-8 6v-6H8a0 0 0 0 1 0 0" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M16 22h12" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
+    screen: '<rect x="8" y="10" width="32" height="22" rx="3" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M18 38h12M24 32v6" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
+    tune: '<circle cx="16" cy="18" r="3" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><circle cx="32" cy="30" r="3" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M8 18h5M19 18h21M8 30h21M35 30h5" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
+    publish: '<path d="M12 34V14l12-6 12 6v20" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M20 34V22h8v12" stroke="#1B50C2" stroke-width="2"/>',
   };
   const holder = el('span', { class: `duo-icon duo-${name}`, 'aria-hidden': 'true' });
   holder.innerHTML = `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">${paths[name]}</svg>`;

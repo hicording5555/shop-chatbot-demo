@@ -40,6 +40,7 @@ describe('signup site', () => {
     const headings = Array.from(view.querySelectorAll('h1, h2')).map((node) => node.textContent);
     expect(headings).toEqual([
       '電話に出られない時間の問い合わせ、ホームページ上で自動受付',
+      '仕組みは、この3つです',
       '今すぐ、3業種を切り替えられます',
       '業種ごとの受付を、その場でお試しください',
       '電話に出られない時間も、問い合わせを取りこぼさない',
