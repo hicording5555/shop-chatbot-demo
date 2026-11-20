@@ -2,8 +2,9 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { demoFaqs, demoMenu, demoShops } from '../src/data/demo-seed';
+import { templateByNiche } from '../src/data/templates';
 import { CONTRACT_MONTHS, DELIVERY_DAYS, DEMO_INDUSTRIES, REPLY_WINDOW, SERVICE_PLANS, UNDECIDED, yen } from '../src/content/service';
-import { corporateAiChatbot, corporateHome } from '../src/lib/corporate';
+import { corporateAiChatbot, corporateBase, corporateHome } from '../src/lib/corporate';
 import { parseRoute } from '../src/lib/route';
 import { allowsIndex, shouldNoindex } from '../src/lib/robots';
 import { mountDemo } from '../src/ui/pages';
@@ -40,20 +41,21 @@ describe('signup site', () => {
     const view = landingView();
     const headings = Array.from(view.querySelectorAll('h1, h2')).map((node) => node.textContent);
     expect(headings).toEqual([
-      'お店のホームページで、よくある質問に答えます',
-      '同じ質問が、くり返し届くことがあります',
-      'ライト・標準・充実の3プランです',
-      '下のチャットに、質問を入れてみてください',
-      '相談から導入までの流れ',
+      '夜の「いくらかかる？」に、目安を返します',
+      '電話に出られない時間があります',
+      'その場で動かせます',
+      '料金',
+      '導入は3ステップです',
       'よくある質問',
-      '相談も、Webだけで進められます',
+      'フォームから相談を送れます',
     ]);
-    expect(view.textContent).toContain('美容室・サロン、整体院向け　ホームページ用チャット');
+    expect(view.textContent).toContain('外壁塗装、学習塾、整体院のホームページに載せる、選択式の受付です。');
     expect(view.textContent).not.toContain('飲食店・美容室・整体院');
+    expect(view.textContent).not.toContain('美容室・サロン');
     const industries = Array.from(view.querySelectorAll('[aria-label="業種"] button')).map((node) => node.textContent);
-    expect(industries).toEqual(['美容室・サロン', '整体院', '飲食店']);
+    expect(industries).toEqual(['外壁・屋根塗装', '学習塾', '整体院']);
     for (const tab of DEMO_INDUSTRIES) {
-      expect(demoShops.find((shop) => shop.industry === tab.id)?.slug).toBe(tab.slug);
+      expect(templateByNiche(tab.id).shop.slug).toBe(tab.slug);
     }
     const logos = Array.from(view.querySelectorAll('img'));
     expect(logos.length).toBeGreaterThan(0);
@@ -76,27 +78,34 @@ describe('signup site', () => {
     expect(view.textContent).not.toContain('実際に触って');
     expect(view.textContent).not.toContain('向いている相手');
     expect(view.textContent).not.toContain('モニター');
-    expect(view.textContent).toContain('デモで最初に表示するプラン');
+    const standardTab = Array.from(view.querySelectorAll('[aria-label="プラン"] button')).find((node) => node.textContent === '標準');
+    expect(standardTab?.getAttribute('aria-selected')).toBe('true');
+    expect(view.textContent).not.toContain('デモで最初に表示するプラン');
     expect(view.textContent).not.toContain('おすすめ');
     const frames = view.querySelectorAll('iframe');
     expect(frames).toHaveLength(1);
     expect(frames[0]?.getAttribute('loading')).toBe('lazy');
-    expect(frames[0]?.getAttribute('src')).toBe('/widget/standard/lumiere');
+    expect(frames[0]?.getAttribute('src')).toBe('/widget/standard/aoba');
     const expand = view.querySelector('.demo-expand');
     expect(expand?.textContent).toBe('別ページで大きく見る');
-    expect(expand?.getAttribute('href')).toBe('/demo/standard');
+    expect(expand?.getAttribute('href')).toBe('/demo/painting');
+    expect(view.textContent).toContain('このテンプレートを自社サイトに導入する');
     expect(frames[0]?.parentElement?.contains(expand)).toBe(false);
     expect(view.textContent).toContain('実在のお店とは関係ありません');
     expect(view.textContent).toContain('いまは未実装です');
     expect(view.textContent).toContain(REPLY_WINDOW);
     const nav = Array.from(view.querySelectorAll('.nav a')).map((node) => node.getAttribute('href'));
-    expect(nav).toEqual(['/', '/plans', '/flow', '/faq', '/consult']);
+    expect(nav).toEqual(['/', '/plans', '/flow', '/faq']);
+    expect(view.querySelectorAll('.nav a[href="/consult"]')).toHaveLength(0);
+    expect(view.querySelectorAll('.header-cta')).toHaveLength(1);
     expect(view.querySelector('a[href="/admin"]')).toBeNull();
     expect(view.querySelector('a[href="/pay"]')).toBeNull();
     expect(view.querySelector('a[href^="/widget/"]')).toBeNull();
     expect(view.querySelector('a[href^="/reserve"]')).toBeNull();
     expect(view.querySelector('a[href="/consult"]')).not.toBeNull();
     expect(view.querySelector('a[href="/consult?plan=light"]')).not.toBeNull();
+    expect(corporateBase('')).toBe('https://arktechlab.com');
+    expect(corporateBase('https://example.com/')).toBe('https://example.com');
     expect(view.querySelector(`a[href="${corporateHome()}"]`)).not.toBeNull();
     expect(view.querySelector(`a[href="${corporateAiChatbot()}"]`)).not.toBeNull();
     for (const phrase of BANNED) expect(view.textContent).not.toContain(phrase);
@@ -104,19 +113,19 @@ describe('signup site', () => {
 
   it('switches the single widget when the industry or plan changes', () => {
     const view = landingView();
-    const food = Array.from(view.querySelectorAll('[aria-label="業種"] button')).find((node) => node.textContent === '飲食店') as HTMLButtonElement;
-    food.click();
+    const juku = Array.from(view.querySelectorAll('[aria-label="業種"] button')).find((node) => node.textContent === '学習塾') as HTMLButtonElement;
+    juku.click();
     const frame = view.querySelector('iframe');
     expect(view.querySelectorAll('iframe')).toHaveLength(1);
-    expect(frame?.getAttribute('src')).toBe('/widget/standard/komorebi');
+    expect(frame?.getAttribute('src')).toBe('/widget/standard/midori');
     const full = Array.from(view.querySelectorAll('[aria-label="プラン"] button')).find((node) => node.textContent === '充実') as HTMLButtonElement;
     full.click();
     expect(view.querySelectorAll('iframe')).toHaveLength(1);
-    expect(frame?.getAttribute('src')).toBe('/widget/full/komorebi');
-    expect(view.querySelector('.demo-expand')?.getAttribute('href')).toBe('/demo/full');
-    food.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
-    expect(frame?.getAttribute('src')).toBe('/widget/full/yasuragi');
-    expect(food.getAttribute('aria-selected')).toBe('false');
+    expect(frame?.getAttribute('src')).toBe('/widget/full/midori');
+    expect(view.querySelector('.demo-expand')?.getAttribute('href')).toBe('/demo/juku');
+    juku.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    expect(frame?.getAttribute('src')).toBe('/widget/full/aoba');
+    expect(juku.getAttribute('aria-selected')).toBe('false');
   });
 
   it('states current limits on plans, flow, faq, legal, and terms', () => {
@@ -193,7 +202,7 @@ describe('signup site', () => {
     for (const path of ['/admin', '/admin/settings', '/widget/full', '/widget/full/komorebi', '/reserve/komorebi', '/shop-demo', '/shop-demo/lumiere', '/nonexistent', '/sitemap.xml']) {
       expect(shouldNoindex(path, true)).toBe(true);
     }
-    for (const path of ['/', '/plans', '/flow', '/faq', '/consult', '/apply', '/privacy', '/legal', '/terms', '/demo/light', '/demo/standard', '/demo/full']) {
+    for (const path of ['/', '/plans', '/flow', '/faq', '/consult', '/apply', '/privacy', '/legal', '/terms', '/demo/light', '/demo/standard', '/demo/full', '/demo/painting', '/demo/juku', '/demo/seitai']) {
       expect(shouldNoindex(path, true)).toBe(false);
       expect(parseRoute(path).name).not.toBe('notfound');
     }

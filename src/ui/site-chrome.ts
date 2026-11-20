@@ -26,7 +26,7 @@ export function arkLogo(): HTMLAnchorElement {
 
 export function routeTitle(name: Route['name']): string {
   const titles: Record<Route['name'], string> = {
-    landing: 'お店のホームページで、よくある質問に答えます｜ARK',
+    landing: '夜の「いくらかかる？」に、目安を返します｜ARK',
     plans: 'プランと料金｜ARK',
     flow: '導入の流れ｜ARK',
     faq: 'よくある質問｜ARK',
@@ -65,10 +65,7 @@ export function masthead(current: string): HTMLElement {
     if (href === current) attrs['aria-current'] = 'page';
     return el('a', attrs, [label]);
   });
-  const nav = el('nav', { id: 'site-nav', class: 'nav' }, [
-    ...links,
-    el('a', { class: 'nav-consult', href: '/consult' }, ['相談・申し込み']),
-  ]);
+  const nav = el('nav', { id: 'site-nav', class: 'nav' }, links);
   const toggle = el('button', {
     class: 'nav-toggle',
     type: 'button',

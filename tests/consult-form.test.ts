@@ -35,7 +35,7 @@ describe('consult form', () => {
     value('例：〇〇美容室', '再監査テスト店');
     value('例：山田 太郎', '山田 太郎');
     value('example@example.com', 'reaudit@example.com');
-    form.querySelector<HTMLInputElement>('input[value="飲食店"]')!.checked = true;
+    form.querySelector<HTMLInputElement>('input[value="外壁・屋根塗装"]')!.checked = true;
     form.querySelector<HTMLInputElement>('input[value="まず話を聞きたい"]')!.checked = true;
     form.querySelector<HTMLInputElement>('input[value="ライト"]')!.checked = true;
     form.querySelector<HTMLInputElement>('input[placeholder="紹介してくれた方の名前"]')!.value = '紹介さん';
@@ -76,7 +76,7 @@ describe('consult form', () => {
     value('例：山田 太郎', '山田 太郎');
     value('example@example.com', 'reaudit@example.com');
     value('https://example.com', 'https:/example.com');
-    form.querySelector<HTMLInputElement>('input[value="飲食店"]')!.checked = true;
+    form.querySelector<HTMLInputElement>('input[value="外壁・屋根塗装"]')!.checked = true;
     form.querySelector<HTMLInputElement>('input[value="まず話を聞きたい"]')!.checked = true;
     form.querySelector<HTMLInputElement>('input[value="ライト"]')!.checked = true;
     const agreed = Array.from(form.querySelectorAll('label')).find((label) => label.textContent?.includes('個人情報の取り扱いに同意する'));
@@ -110,7 +110,7 @@ describe('consult form', () => {
     value('例：〇〇美容室', '再監査テスト店');
     value('例：山田 太郎', '山田 太郎');
     value('example@example.com', 'reaudit@example.com');
-    form.querySelector<HTMLInputElement>('input[value="飲食店"]')!.checked = true;
+    form.querySelector<HTMLInputElement>('input[value="外壁・屋根塗装"]')!.checked = true;
     form.querySelector<HTMLInputElement>('input[value="まず話を聞きたい"]')!.checked = true;
     form.querySelector<HTMLInputElement>('input[value="ライト"]')!.checked = true;
     const agreed = Array.from(form.querySelectorAll('label')).find((label) => label.textContent?.includes('個人情報の取り扱いに同意する'));

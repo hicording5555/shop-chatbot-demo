@@ -4,7 +4,7 @@ const PUBLIC_EXACT = new Set(['/', '/plans', '/flow', '/faq', '/consult', '/appl
 export function isPublicPath(pathname: string): boolean {
   const path = pathname.replace(/\/+$/, '') || '/';
   if (PUBLIC_EXACT.has(path)) return true;
-  return /^\/demo\/(light|standard|full)$/.test(path);
+  return /^\/demo\/(light|standard|full)$/.test(path) || /^\/demo\/(painting|juku|seitai)$/.test(path);
 }
 
 /** 未設定のあいだは公開しない。`1` または `true` のときだけ、公開パスを検索対象にする。 */

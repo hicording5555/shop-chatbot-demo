@@ -1,6 +1,7 @@
 import type { Catalog, Faq, HandoffInput, Industry, MenuItem, PlanId, Shop } from '../types';
 import { INDUSTRY_LABEL, PLAN_LABEL, containsEfficacyClaim } from '../types';
 import { validateHandoff, type HandoffDraft } from './handoff';
+import { guideButton, guideFromText, templateHomeButtons, templateIntro, templateOf, type GuideCursor } from './guides';
 import { interpret, matchFaq, menuCategory, type Intent } from './match';
 
 export interface ChatButton {
@@ -32,6 +33,7 @@ export interface ChatState {
   industry: Industry | null;
   mode: 'industry' | 'chat' | 'handoff-form';
   locked: boolean;
+  guide: GuideCursor | null;
 }
 
 export interface Turn {
@@ -63,7 +65,7 @@ export function emptyBot(paragraphs: string[], buttons: ChatButton[] = []): BotM
 
 export function start(plan: PlanId): { state: ChatState; bot: BotMessage } {
   return {
-    state: { plan, industry: null, mode: 'industry', locked: false },
+    state: { plan, industry: null, mode: 'industry', locked: false, guide: null },
     bot: emptyBot(
       [`${PLAN_LABEL[plan]}プランのデモです。業種を選んでください。`],
       industryButtons(),
@@ -71,7 +73,7 @@ export function start(plan: PlanId): { state: ChatState; bot: BotMessage } {
   };
 }
 
-const INDUSTRY_PICK_ORDER: Industry[] = ['salon', 'seitai', 'food'];
+const INDUSTRY_PICK_ORDER: Industry[] = ['painting', 'juku', 'seitai'];
 
 export function industryButtons(): ChatButton[] {
   return INDUSTRY_PICK_ORDER.map((industry) => ({
@@ -81,17 +83,24 @@ export function industryButtons(): ChatButton[] {
 }
 
 export function startLocked(plan: PlanId, shop: Shop, faqs: Faq[]): { state: ChatState; bot: BotMessage } {
+  if (templateOf(shop)) {
+    return {
+      state: { plan, industry: shop.industry, mode: 'chat', locked: true, guide: null },
+      bot: emptyBot([`${shop.name}です。`, templateIntro(plan, shop)], templateHomeButtons(plan, shop, true)),
+    };
+  }
   const intro =
     plan === 'light'
       ? 'ご質問を入力してください。下のよくある質問からも選べます。'
       : 'ご用件を選ぶか、そのまま質問を入力してください。';
   return {
-    state: { plan, industry: shop.industry, mode: 'chat', locked: true },
-    bot: emptyBot([intro], homeButtons(plan, shop.industry, faqs, true)),
+    state: { plan, industry: shop.industry, mode: 'chat', locked: true, guide: null },
+    bot: emptyBot([intro], homeButtons(plan, shop.industry, faqs, true, shop)),
   };
 }
 
-export function homeButtons(plan: PlanId, industry: Industry, faqs: Faq[], locked = false): ChatButton[] {
+export function homeButtons(plan: PlanId, industry: Industry, faqs: Faq[], locked = false, shop?: Shop): ChatButton[] {
+  if (shop && templateOf(shop)) return templateHomeButtons(plan, shop, locked);
   const reset = locked ? [] : [{ id: 'industry:reset', label: '業種を選び直す' }];
   if (plan === 'light') {
     return [
@@ -177,25 +186,40 @@ function pickIndustry(plan: PlanId, industry: Industry, catalog: Catalog): Turn 
   const shop = catalog.shops.find((item) => item.industry === industry && item.published);
   if (!shop) {
     return {
-      state: { plan, industry: null, mode: 'industry', locked: false },
+      state: { plan, industry: null, mode: 'industry', locked: false, guide: null },
       userText: INDUSTRY_LABEL[industry],
       bot: emptyBot(['この業種のお店データが見つかりません。seed.sql を確認してください。'], industryButtons()),
     };
   }
   const faqs = catalog.faqs.filter((faq) => faq.shopId === shop.id && faq.published);
+  if (templateOf(shop)) {
+    return {
+      state: { plan, industry, mode: 'chat', locked: false, guide: null },
+      userText: INDUSTRY_LABEL[industry],
+      bot: emptyBot([`ここから${INDUSTRY_LABEL[industry]}のご案内です。`, `${shop.name}です。`, templateIntro(plan, shop)], templateHomeButtons(plan, shop, false)),
+    };
+  }
   const intro =
     plan === 'light'
       ? 'ご質問を入力してください。下のよくある質問からも選べます。'
       : 'ご用件を選ぶか、そのまま質問を入力してください。';
   return {
-    state: { plan, industry, mode: 'chat', locked: false },
+    state: { plan, industry, mode: 'chat', locked: false, guide: null },
     userText: INDUSTRY_LABEL[industry],
-    bot: emptyBot([`ここから${INDUSTRY_LABEL[industry]}のご案内です。`, `${shop.name}です。`, intro], homeButtons(plan, industry, faqs)),
+    bot: emptyBot([`ここから${INDUSTRY_LABEL[industry]}のご案内です。`, `${shop.name}です。`, intro], homeButtons(plan, industry, faqs, false, shop)),
   };
 }
 
 function answerButton(state: ChatState, shop: Shop, faqs: Faq[], menu: MenuItem[], id: string, label?: string): Turn {
-  const next = { ...state, mode: 'chat' as const };
+  const guided = guideButton(state.plan, shop, state.guide, id);
+  if (guided) {
+    return {
+      state: { ...state, mode: 'chat', guide: guided.guide },
+      userText: guided.userText,
+      bot: guided.bot,
+    };
+  }
+  const next = { ...state, mode: 'chat' as const, guide: null };
   if (id === 'section:reserve') {
     return { state: next, userText: '予約したい', bot: reservationMessage(state.plan, shop) };
   }
@@ -212,7 +236,7 @@ function answerButton(state: ChatState, shop: Shop, faqs: Faq[], menu: MenuItem[
     return { state: next, userText: '初めての方へ', bot: firstVisitMessage(shop) };
   }
   if (id === 'section:menu') {
-    return { state: next, userText: shop.industry === 'food' ? 'メニューを見る' : 'メニュー・料金', bot: menuRoot(shop, menu) };
+    return { state: next, userText: shop.industry === 'food' ? 'メニューを見る' : 'メニュー・料金', bot: menuRoot(state.plan, shop, menu) };
   }
   if (id === 'section:faq' || id === 'back:faq') {
     return { state: next, userText: 'よくある質問', bot: faqList(state.plan, faqs) };
@@ -232,7 +256,7 @@ function answerButton(state: ChatState, shop: Shop, faqs: Faq[], menu: MenuItem[
         userText: label && label !== '質問' ? label : '選んだ質問',
         bot: emptyBot(
           ['業種を切り替えたため、この質問は使えません。下のボタンから選び直してください。'],
-          homeButtons(state.plan, shop.industry, faqs, state.locked),
+          homeButtons(state.plan, shop.industry, faqs, state.locked, shop),
         ),
       };
     }
@@ -266,16 +290,20 @@ function answerButton(state: ChatState, shop: Shop, faqs: Faq[], menu: MenuItem[
 
 function answerText(state: ChatState, shop: Shop, faqs: Faq[], menu: MenuItem[], text: string): Turn {
   const trimmed = text.trim();
-  const next = { ...state, mode: 'chat' as const };
+  const next = { ...state, mode: 'chat' as const, guide: null };
   if (!trimmed) {
-    return { state: next, bot: emptyBot(['ご質問を入力してください。'], homeButtons(state.plan, shop.industry, faqs, state.locked)) };
+    return { state: next, bot: emptyBot(['ご質問を入力してください。'], homeButtons(state.plan, shop.industry, faqs, state.locked, shop)) };
+  }
+  const guided = guideFromText(state.plan, shop, trimmed);
+  if (guided) {
+    return { state: { ...next, guide: guided.guide }, userText: trimmed, bot: guided.bot };
   }
   let intent = interpret(trimmed, shop.industry, faqs);
   if (state.plan === 'light' && intent.kind === 'menu') {
     return {
       state: next,
       userText: trimmed,
-      bot: emptyBot(['メニューと料金は、お店のホームページでご確認ください。'], homeButtons(state.plan, shop.industry, faqs, state.locked)),
+      bot: emptyBot(['メニューと料金は、お店のホームページでご確認ください。'], homeButtons(state.plan, shop.industry, faqs, state.locked, shop)),
     };
   }
   if (state.plan === 'light' && LIGHT_RICH.has(intent.kind)) {
@@ -296,9 +324,9 @@ function messageForIntent(
 ): BotMessage {
   switch (intent.kind) {
     case 'empty':
-      return emptyBot(['すみません、うまく読み取れませんでした。下のボタンから選ぶか、ことばで質問してください。'], homeButtons(plan, shop.industry, faqs, locked));
+      return emptyBot(['すみません、うまく読み取れませんでした。下のボタンから選ぶか、ことばで質問してください。'], homeButtons(plan, shop.industry, faqs, locked, shop));
     case 'greeting':
-      return emptyBot(['こんにちは。下のボタンか、質問の入力でご案内します。'], homeButtons(plan, shop.industry, faqs, locked));
+      return emptyBot(['こんにちは。下のボタンか、質問の入力でご案内します。'], homeButtons(plan, shop.industry, faqs, locked, shop));
     case 'medical':
       return medicalMessage(plan, shop);
     case 'staff':
@@ -307,7 +335,7 @@ function messageForIntent(
     case 'cross':
       return emptyBot(
         [`申し訳ありません。こちらは${shop.name}のご案内です。`, '下のボタンから、当店についてお調べいただけます。'],
-        homeButtons(plan, shop.industry, faqs, locked),
+        homeButtons(plan, shop.industry, faqs, locked, shop),
       );
     case 'reserve-change':
       return reserveChangeMessage(plan, shop);
@@ -322,7 +350,7 @@ function messageForIntent(
     case 'menu': {
       const category = menuCategory(shop.industry, query);
       if (category) return menuList(shop, menu, category);
-      return menuRoot(shop, menu);
+      return menuRoot(plan, shop, menu);
     }
     case 'recommend':
       return recommendMessage(shop, menu);
@@ -454,7 +482,10 @@ function firstVisitMessage(shop: Shop): BotMessage {
   return message;
 }
 
-function menuRoot(shop: Shop, menu: MenuItem[]): BotMessage {
+function menuRoot(plan: PlanId, shop: Shop, menu: MenuItem[]): BotMessage {
+  if (templateOf(shop)) {
+    return emptyBot(['下の質問から選んでください。'], templateHomeButtons(plan, shop, true));
+  }
   if (shop.industry === 'seitai') return menuList(shop, menu, 'course');
   const categories =
     shop.industry === 'food'
@@ -581,7 +612,7 @@ function handoffAsk(): BotMessage {
 
 function homeAgain(plan: PlanId, shop: Shop, faqs: Faq[], locked = false): BotMessage {
   const intro = plan === 'light' ? 'ご質問を入力してください。' : 'ご用件を選んでください。';
-  return emptyBot([intro], homeButtons(plan, shop.industry, faqs, locked));
+  return emptyBot([intro], homeButtons(plan, shop.industry, faqs, locked, shop));
 }
 
 function backButton(_plan: PlanId): ChatButton {

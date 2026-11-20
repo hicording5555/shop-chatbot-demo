@@ -203,6 +203,9 @@ describe('env and routes', () => {
 
   it('routes the three demos, the widget, and admin', () => {
     expect(parseRoute('/demo/light')).toEqual({ name: 'demo', plan: 'light' });
+    expect(parseRoute('/demo/painting')).toEqual({ name: 'demo', plan: 'standard', niche: 'painting' });
+    expect(parseRoute('/demo/juku')).toEqual({ name: 'demo', plan: 'standard', niche: 'juku' });
+    expect(parseRoute('/demo/seitai')).toEqual({ name: 'demo', plan: 'standard', niche: 'seitai' });
     expect(parseRoute('/widget/full/')).toEqual({ name: 'widget', plan: 'full' });
     expect(parseRoute('/admin')).toEqual({ name: 'admin' });
     expect(parseRoute('/consult')).toEqual({ name: 'consult' });
