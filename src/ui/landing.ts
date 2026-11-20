@@ -17,11 +17,13 @@ import { pageShell } from './site-chrome';
 
 const SHOT = {
   shop: '/shots/shop-aoba.png',
-  estimate: '/shots/paint-estimate.png',
-  paintStart: '/shots/paint-start.png',
-  paintBook: '/shots/paint-book.png',
+  heroPhone: '/shots/paint-hero.png',
+  cropStart: '/shots/crop-start.png',
+  cropEstimate: '/shots/crop-estimate.png',
+  cropBook: '/shots/crop-book.png',
   jukuStart: '/shots/juku-start.png',
   seitaiStart: '/shots/seitai-start.png',
+  paintStart: '/shots/paint-start.png',
   admin: '/shots/admin-aoba.png',
 };
 
@@ -47,12 +49,15 @@ export function landingPage(): HTMLElement {
 function hero(): HTMLElement {
   return el('section', { class: 'hero' }, [
     el('div', { class: 'wrap hero-layout' }, [
-      el('p', { class: 'eyebrow' }, ['外壁塗装・学習塾・整体院のホームページに']),
-      el('h1', null, [
-        el('span', { class: 'hero-line' }, ['電話に出られない時間の「いくら？」に、']),
-        el('span', { class: 'hero-line' }, ['ホームページが答えます']),
-      ]),
       el('div', { class: 'hero-copy' }, [
+        el('p', { class: 'eyebrow' }, ['外壁塗装・学習塾・整体院のホームページに']),
+        el('h1', null, [
+          el('span', { class: 'hero-line' }, [
+            el('span', { class: 'hero-a' }, ['電話に出られない時間の']),
+            el('span', { class: 'hero-b' }, ['「いくら？」に、']),
+          ]),
+          el('span', { class: 'hero-line' }, ['ホームページが答えます']),
+        ]),
         el('p', { class: 'lede' }, ['お客様はボタンを選ぶだけ。お店が用意した答えだけを返す、選択式の受付チャットです。']),
         el('div', { class: 'cta-row' }, [
           el('a', { class: 'button', href: '#demo' }, ['デモを試す']),
@@ -66,10 +71,12 @@ function hero(): HTMLElement {
       ]),
       el('div', { class: 'hero-visual' }, [
         el('div', { class: 'laptop' }, [
-          el('div', { class: 'laptop-bar' }, [el('span', null, ['あおば塗装（架空）'])]),
-          el('img', { src: SHOT.shop, alt: '架空の塗装店のホームページ。右下にチャットのボタンがあります。' }),
+          el('div', { class: 'laptop-screen' }, [
+            el('img', { src: SHOT.shop, alt: '架空の塗装店のホームページ。右下にチャットのボタンがあります。' }),
+          ]),
+          el('div', { class: 'laptop-base' }, []),
         ]),
-        phoneFrame(el('img', { class: 'phone-shot', src: SHOT.estimate, alt: '' })),
+        phoneFrame(el('img', { class: 'phone-shot', src: SHOT.heroPhone, alt: '' })),
         el('p', { class: 'shot-caption' }, ['画面は架空の塗装店のデモです。金額は架空の価格表によります。']),
       ]),
     ]),
@@ -95,31 +102,46 @@ function industryBand(): HTMLElement {
 
 function timeline(): HTMLElement {
   const events = [
-    { time: '10:30', who: '整体院', body: '施術中で電話に出られない。「初めてですが、服装は？」' },
-    { time: '13:00', who: '塗装', body: '足場の上で着信に気づかない。' },
-    { time: '17:30', who: '学習塾', body: '授業が始まり、受付に人がいない。' },
-    { time: '21:00', who: '塗装', body: '夜、スマホで「外壁塗装 いくら」と調べている人がいる。' },
-    { time: '22:30', who: '学習塾', body: '保護者が、授業料のページを見ている。' },
+    { time: '10:30', at: 10.5, side: 'up', who: '整体院', body: '施術中で電話に出られない。「初めてですが、服装は？」' },
+    { time: '13:00', at: 13, side: 'down', who: '塗装', body: '足場の上で着信に気づかない。' },
+    { time: '17:30', at: 17.5, side: 'up', who: '学習塾', body: '授業が始まり、受付に人がいない。' },
+    { time: '21:00', at: 21, side: 'down', who: '塗装', body: '夜、スマホで「外壁塗装 いくら」と調べている人がいる。' },
+    { time: '22:30', at: 22.5, side: 'up', who: '学習塾', body: '保護者が、授業料のページを見ている。' },
   ];
+  const pos = (hour: number) => `${((hour - 9) / 15) * 100}%`;
+  const board = el('div', { class: 'tl-board', 'aria-hidden': 'true' }, [
+    el('p', { class: 'tl-legend' }, [
+      el('span', { class: 'leg-band' }, ['電話に出にくい時間']),
+      el('span', { class: 'leg-dot' }, ['問い合わせ']),
+    ]),
+    el('div', { class: 'tl-scale' }, [
+      el('span', null, ['9:00']),
+      el('div', { class: 'tl-bar' }, [
+        el('i', { class: 'tl-busy day' }, []),
+        el('i', { class: 'tl-busy night' }, []),
+        ...events.map((item) => el('span', { class: `tl-pin ${item.side}`, style: `left:${pos(item.at)}` }, [
+          el('span', { class: 'tl-dot' }, []),
+          el('span', { class: 'tl-card' }, [
+            el('time', null, [item.time]),
+            el('strong', null, [item.who]),
+            el('span', null, [item.body]),
+          ]),
+        ])),
+      ]),
+      el('span', null, ['24:00']),
+    ]),
+  ]);
   return el('section', { class: 'block', id: 'hours' }, [
     el('div', { class: 'wrap' }, [
       el('p', { class: 'eyebrow' }, ['こんなこと、ありませんか']),
       el('h2', null, ['お客様が聞きたい時間に、お店は手が離せない']),
       el('p', { class: 'section-lead' }, ['問い合わせは、営業時間の中だけに来るわけではありません。']),
-      el('div', { class: 'axis', 'aria-hidden': 'true' }, [
-        el('span', null, ['9:00']),
-        el('span', { class: 'axis-track' }, [
-          el('i', { class: 'axis-band day' }, []),
-          el('i', { class: 'axis-band night' }, []),
-        ]),
-        el('span', null, ['24:00']),
-      ]),
-      el('p', { class: 'axis-note' }, ['例']),
-      el('ol', { class: 'timeline' }, events.map((item) => el('li', null, [
+      board,
+      el('ol', { class: 'tl-list' }, events.map((item) => el('li', null, [
         el('time', null, [item.time]),
         el('p', null, [el('strong', null, [item.who]), item.body]),
       ]))),
-      el('p', { class: 'section-lead' }, ['折り返しの電話を待たずに、ほかのお店に問い合わせる人もいます。']),
+      el('p', { class: 'tl-note' }, ['折り返しの電話を待たずに、ほかのお店に問い合わせる人もいます。']),
     ]),
   ]);
 }
@@ -140,12 +162,13 @@ function comparison(): HTMLElement {
       el('p', { class: 'section-lead' }, ['受付ボットは電話をなくすものではありません。電話に出られない時間を受け持ちます。']),
       el('div', { class: 'table-scroll' }, [
         el('table', { class: 'compare diff' }, [
-          el('thead', null, [el('tr', null, head.map((label, index) => el('th', { scope: 'col' }, [
-            label,
-            ...(index === 3 ? [el('span', { class: 'col-tag' }, ['このサービス'])] : []),
-          ])))]),
+          el('thead', null, [el('tr', null, head.map((label, index) => (
+            index === 3
+              ? el('th', { class: 'botlia-col', scope: 'col' }, [el('span', { class: 'col-pill' }, ['このサービス']), label])
+              : el('th', { scope: 'col' }, [label])
+          )))]),
           el('tbody', null, rows.map((row) => el('tr', null, row.map((cell, index) => (
-            index === 0 ? el('th', { scope: 'row' }, [cell]) : el('td', null, [cell])
+            index === 0 ? el('th', { scope: 'row' }, [cell]) : markCell(cell)
           ))))),
         ]),
       ]),
@@ -154,11 +177,17 @@ function comparison(): HTMLElement {
   ]);
 }
 
+function markCell(text: string): HTMLElement {
+  const kind = text.startsWith('○') ? 'yes' : text.startsWith('×') ? 'no' : '';
+  if (!kind) return el('td', null, [text]);
+  return el('td', null, [el('span', { class: `sym ${kind}` }, [text.slice(0, 1)]), text.slice(1)]);
+}
+
 function mechanism(): HTMLElement {
   const steps = [
-    { time: '21:04', title: 'お客様が質問を選ぶ', body: 'ホームページ右下のチャットを開き、「費用の目安を知る」を押します。', src: SHOT.paintStart, alt: 'あおば塗装のデモ。最初の質問ボタン。' },
-    { time: '21:05', title: '3つ答えると、概算が出る', body: '建物（戸建て2階）、広さ（26〜35坪）、外壁の種類を選ぶと、お店の公開価格表にもとづく目安を表示します。', src: SHOT.estimate, alt: '外壁の目安が78万〜108万円（税込）と出た画面。' },
-    { time: '21:06', title: '予約ページへ進む', body: '「無料の現地調査を予約する」を押すと、お店がいま使っている予約ページが開きます。ボットの中では予約を確定しません。', src: SHOT.paintBook, alt: '無料の現地調査を予約するボタンが出た画面。' },
+    { time: '21:04', title: 'お客様が質問を選ぶ', body: 'ホームページ右下のチャットを開き、「費用の目安を知る」を押します。', src: SHOT.cropStart, alt: 'あおば塗装のデモ。最初の質問ボタン。' },
+    { time: '21:05', title: '3つ答えると、概算が出る', body: '建物（戸建て2階）、広さ（26〜35坪）、外壁の種類を選ぶと、お店の公開価格表にもとづく目安を表示します。', src: SHOT.cropEstimate, alt: '外壁の目安が78万〜108万円（税込）と出た画面。' },
+    { time: '21:06', title: '予約ページへ進む', body: '「無料の現地調査を予約する」を押すと、お店がいま使っている予約ページが開きます。ボットの中では予約を確定しません。', src: SHOT.cropBook, alt: '無料の現地調査を予約するボタンが出た画面。' },
   ];
   return el('section', { class: 'block', id: 'how' }, [
     el('div', { class: 'wrap' }, [
@@ -166,15 +195,17 @@ function mechanism(): HTMLElement {
       el('h2', null, ['夜9時の「外壁いくら？」は、', el('br', { class: 'h-break' }), 'こう受け付けます']),
       el('p', { class: 'section-lead' }, ['例・架空の塗装店']),
       el('ol', { class: 'mech' }, steps.map((step, index) => el('li', null, [
-        el('div', { class: 'mech-copy' }, [
+        el('div', { class: 'mech-no' }, [
           el('span', { class: 'step-no' }, [String(index + 1).padStart(2, '0')]),
-          el('p', { class: 'mech-time' }, [step.time]),
+          el('span', { class: 'mech-time' }, [step.time]),
+        ]),
+        el('div', { class: 'mech-copy' }, [
           el('h3', null, [step.title]),
           el('p', null, [step.body]),
         ]),
         el('img', { class: 'mech-shot', src: step.src, alt: step.alt }),
       ]))),
-      el('p', { class: 'section-lead' }, ['用意していない質問には答えを作りません。電話・メール、または人への引き継ぎ（充実プラン）を案内します。']),
+      el('p', { class: 'callout' }, ['用意していない質問には答えを作りません。電話・メール、または人への引き継ぎ（充実プラン）を案内します。']),
     ]),
   ]);
 }
@@ -248,14 +279,14 @@ function adminSection(): HTMLElement {
       el('p', { class: 'eyebrow' }, ['標準・充実プラン']),
       el('h2', null, ['答えの文面は、お店で直せます']),
       el('p', { class: 'section-lead' }, ['料金が変わった、休みが増えた。そんなときは管理画面で質問と答えを書き換えます。']),
-      el('div', { class: 'browser' }, [
-        el('div', { class: 'browser-url' }, ['bot.arktechlab.com/admin']),
-        el('img', { src: SHOT.admin, alt: 'あおば塗装（架空）の管理画面。質問の編集フォームが開いている。' }),
-      ]),
       el('ol', { class: 'callouts' }, [
         el('li', null, ['質問と答えを追加・編集']),
         el('li', null, ['並び順を変える']),
         el('li', null, ['チャットへの表示']),
+      ]),
+      el('div', { class: 'browser' }, [
+        el('div', { class: 'browser-url' }, ['bot.arktechlab.com/admin']),
+        el('img', { src: SHOT.admin, alt: 'あおば塗装（架空）の管理画面。質問の編集フォームが開いている。' }),
       ]),
       el('div', { class: 'table-scroll' }, [
         el('table', { class: 'compare' }, [
