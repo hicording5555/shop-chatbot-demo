@@ -620,13 +620,12 @@ body.widget .chat { height: 100%; min-height: 0; max-height: 100%; border-radius
 .check-list { margin: 16px 0; padding: 0; list-style: none; }
 .check-list li::before { content: "✓ "; color: var(--accent); font-weight: 700; }
 
-.browser { background: #fff; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05); }
+.browser { width: min(100%, calc(560px * 1280 / 800)); margin-inline: auto; background: #fff; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05); }
 .browser-url { padding: 10px 14px; background: #f8fafc; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 13px; }
-.browser img { display: block; width: 100%; height: auto; object-fit: contain; }
-.callouts { margin: 16px 0 24px; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 12px 24px; }
-.callouts li { counter-increment: call; }
-.callouts { counter-reset: call; }
-.callouts li::before { content: counter(call, decimal-leading-zero) " "; color: var(--accent); font-weight: 700; }
+.browser-stage { position: relative; }
+.browser-stage img { display: block; width: 100%; height: auto; max-height: 560px; object-fit: contain; object-position: top left; }
+.shot-pin { position: absolute; z-index: 1; transform: translate(0, -50%); display: inline-flex; align-items: center; gap: 4px; height: 18px; margin: 0; padding: 0 7px 0 0; border-radius: 999px; background: #fff; border: 1px solid #d5deea; box-shadow: 0 1px 3px rgba(16, 29, 50, 0.18); color: var(--ink); font-size: 11px; font-weight: 700; line-height: 1; white-space: nowrap; }
+.shot-pin span { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: #fff; font-size: 11px; }
 
 .zig { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 40px; align-items: center; padding: 36px 0; }
 .zig.flip { direction: rtl; }

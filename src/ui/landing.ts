@@ -268,6 +268,10 @@ function demoSection(): HTMLElement {
   ]);
 }
 
+function shotPin(mark: string, label: string, x: string, y: string): HTMLElement {
+  return el('p', { class: 'shot-pin', style: `left:${x};top:${y}` }, [el('span', null, [mark]), label]);
+}
+
 function adminSection(): HTMLElement {
   const rows: [string, string][] = [
     ['質問と答えの追加・編集・削除', '標準・充実'],
@@ -279,14 +283,14 @@ function adminSection(): HTMLElement {
       el('p', { class: 'eyebrow' }, ['標準・充実プラン']),
       el('h2', null, ['答えの文面は、お店で直せます']),
       el('p', { class: 'section-lead' }, ['料金が変わった、休みが増えた。そんなときは管理画面で質問と答えを書き換えます。']),
-      el('ol', { class: 'callouts' }, [
-        el('li', null, ['質問と答えを追加・編集']),
-        el('li', null, ['並び順を変える']),
-        el('li', null, ['チャットへの表示']),
-      ]),
       el('div', { class: 'browser' }, [
         el('div', { class: 'browser-url' }, ['bot.arktechlab.com/admin']),
-        el('img', { src: SHOT.admin, alt: 'あおば塗装（架空）の管理画面。質問の編集フォームが開いている。' }),
+        el('div', { class: 'browser-stage' }, [
+          el('img', { src: SHOT.admin, alt: 'あおば塗装（架空）の管理画面。質問の一覧と、開いた編集フォーム。' }),
+          shotPin('①', '追加・編集', '24.5%', '37.5%'),
+          shotPin('②', '並び順', '36.4%', '30.65%'),
+          shotPin('③', '表示中', '18.6%', '25.5%'),
+        ]),
       ]),
       el('div', { class: 'table-scroll' }, [
         el('table', { class: 'compare' }, [
