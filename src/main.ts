@@ -3,7 +3,9 @@ import { readEnv } from './lib/env';
 import { enforceAdminFrame } from './lib/admin-frame';
 import { parseRoute } from './lib/route';
 import { mountAdmin, mountAdminFixture } from './ui/admin';
-import { consultView, missingEnvView, mountDemo, mountReserve, notFoundView, privacyView } from './ui/pages';
+import { consultView, missingEnvView, mountDemo, mountReserve, notFoundView, privacyView, staticReserveView } from './ui/pages';
+import { isTemplateSlug, templateByNiche, templateBySlug, templateCatalog } from './data/templates';
+import { INDUSTRY_LABEL } from './types';
 import { faqView, flowView, landingView, legalView, plansView, termsView } from './ui/service-pages';
 import { applyDocumentPolicy, routeTitle } from './ui/site-chrome';
 import './styles.css';
@@ -29,7 +31,8 @@ function render(): void {
   if (!app) return;
   renderedKey = documentKey();
   const route = parseRoute(window.location.pathname);
-  applyDocumentPolicy(window.location.pathname, routeTitle(route.name));
+  const title = route.name === 'demo' && route.niche ? `${INDUSTRY_LABEL[route.niche]}のデモ｜ARK` : routeTitle(route.name);
+  applyDocumentPolicy(window.location.pathname, title);
   if (enforceAdminFrame(window.location.pathname, window) === 'deny') {
     const href = window.location.pathname + window.location.search + window.location.hash;
     app.replaceChildren(framedAdminNotice(href || '/admin'));
@@ -40,36 +43,50 @@ function render(): void {
   const env = readEnv();
   const fixture = import.meta.env.DEV && new URLSearchParams(window.location.search).has('fixture');
   document.body.classList.toggle('widget', route.name === 'widget');
-  if (fixture && (route.name === 'demo' || route.name === 'widget' || route.name === 'admin')) {
-    void import('./data/demo-seed').then(({ demoFaqs, demoMenu, demoShops }) => {
-      if (route.name === 'admin') {
-        const shop = demoShops.find((item) => item.industry === 'seitai');
-        if (!shop || !app) return;
-        mountAdminFixture(
-          app,
-          shop,
-          demoFaqs.filter((item) => item.shopId === shop.id),
-          [],
-        );
-        return;
-      }
-      if (!app) return;
-      const url = env.ok ? env.url : 'http://127.0.0.1:54321';
-      const key = env.ok ? env.anonKey : 'fixture-anon-key';
-      mountDemo(
-        app,
-        route.plan,
-        url,
-        key,
-        route.name === 'widget',
+  const bundledUrl = env.ok ? env.url : 'http://127.0.0.1:54321';
+  const bundledKey = env.ok ? env.anonKey : 'fixture-anon-key';
+  if (route.name === 'demo') {
+    const catalog = templateCatalog();
+    const slug = route.niche ? templateByNiche(route.niche).shop.slug : undefined;
+    mountDemo(app, route.plan, bundledUrl, bundledKey, false, catalog, slug);
+    return;
+  }
+  if (route.name === 'widget' && (!route.slug || isTemplateSlug(route.slug))) {
+    mountDemo(app, route.plan, bundledUrl, bundledKey, true, templateCatalog(), route.slug);
+    return;
+  }
+  if (route.name === 'reserve') {
+    const template = templateBySlug(route.slug);
+    if (template) {
+      app.replaceChildren(staticReserveView(template.shop));
+      return;
+    }
+  }
+  if (fixture && route.name === 'admin') {
+    const slug = new URLSearchParams(window.location.search).get('shop') || 'aoba';
+    const template = templateBySlug(slug);
+    if (template && app) {
+      mountAdminFixture(app, template.shop, [
         {
-          shops: demoShops,
-          faqs: demoFaqs,
-          menu: demoMenu,
+          id: 'fixture-survey',
+          shopId: template.shop.id,
+          question: '現地調査は無料ですか',
+          answer: '無料です。調査のあと、金額は見積書でお出しします。',
+          keywords: ['見積', '無料'],
+          published: true,
+          sortOrder: 1,
         },
-        route.name === 'widget' ? route.slug : undefined,
-      );
-    });
+        {
+          id: 'fixture-days',
+          shopId: template.shop.id,
+          question: '工期はどのくらいですか',
+          answer: '戸建ての塗り替えは、天候によりおおむね10〜14日が目安です。',
+          keywords: ['工期', '日数'],
+          published: true,
+          sortOrder: 2,
+        },
+      ], []);
+    }
     return;
   }
   if (route.name === 'landing') {

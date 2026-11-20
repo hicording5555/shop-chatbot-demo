@@ -1,4 +1,4 @@
-export type Industry = 'food' | 'salon' | 'seitai';
+export type Industry = 'painting' | 'juku' | 'seitai' | 'food' | 'salon';
 export type PlanId = 'light' | 'standard' | 'full';
 
 export interface ShopExtra {
@@ -10,6 +10,10 @@ export interface ShopExtra {
   staff?: string;
   lastBooking?: string;
   firstVisit?: string;
+  /** 対応エリア。見込み客デモではここだけ差し替える。 */
+  area?: string;
+  /** #RRGGBB。店舗デモの差し色。販売ページの配色とは別。 */
+  brandColor?: string;
 }
 
 export interface Shop {
@@ -68,9 +72,11 @@ export interface HandoffInput {
 }
 
 export const INDUSTRY_LABEL: Record<Industry, string> = {
+  painting: '外壁・屋根塗装',
+  juku: '学習塾',
+  seitai: '整体院',
   food: '飲食店・カフェ',
   salon: '美容室・サロン',
-  seitai: '整体院',
 };
 
 export const PLAN_LABEL: Record<PlanId, string> = {

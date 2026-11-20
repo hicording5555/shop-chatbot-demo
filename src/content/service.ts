@@ -24,8 +24,8 @@ export const SERVICE_PLANS: ServicePlan[] = [
     monthlyTaxEx: 9800,
     termTotalTaxIn: 129360,
     summary: 'FAQ自動回答',
-    audience: '公開しているよくある質問を、チャットで案内したいお店',
-    features: ['公開情報に基づくFAQの自動回答', '既存の予約ページへの案内（ボットの中では確定しません）'],
+    audience: 'よくある質問を案内したいお店',
+    features: ['公開情報に基づくFAQの自動回答', '既存の予約ページへの案内', 'ボットの中では予約を確定しない'],
   },
   {
     id: 'standard',
@@ -34,8 +34,8 @@ export const SERVICE_PLANS: ServicePlan[] = [
     monthlyTaxEx: 19800,
     termTotalTaxIn: 261360,
     summary: '選択肢案内＋FAQ管理画面',
-    audience: 'メニューや営業時間の案内と、FAQの編集もしたいお店',
-    features: ['ライトの内容', 'メニュー・営業時間・アクセスなどの選択肢案内', 'FAQを店が直せる管理画面'],
+    audience: '選択式の案内と編集をしたいお店',
+    features: ['ライトの内容', '費用・コース・メニューの案内', 'FAQを店が直せる管理画面'],
   },
   {
     id: 'full',
@@ -44,18 +44,18 @@ export const SERVICE_PLANS: ServicePlan[] = [
     monthlyTaxEx: 29800,
     termTotalTaxIn: 393360,
     summary: '標準＋人への引き継ぎ',
-    audience: '答えられない質問を、人へ引き継ぎたいお店',
-    features: ['標準の内容', '答えられない質問を人に引き継ぎ'],
+    audience: '人への引き継ぎもしたいお店',
+    features: ['標準の内容', '答えられない質問を人に引き継ぎ', '予約は既存のページへ案内'],
   },
 ];
 
 export const DEMO_PLAN_ID: PlanId = 'standard';
 
-/** 表示順は美容室・サロン、整体院、飲食店。 */
-export const DEMO_INDUSTRIES: { id: 'salon' | 'seitai' | 'food'; label: string; slug: string }[] = [
-  { id: 'salon', label: '美容室・サロン', slug: 'lumiere' },
-  { id: 'seitai', label: '整体院', slug: 'yasuragi' },
-  { id: 'food', label: '飲食店', slug: 'komorebi' },
+/** 表示順は外壁・屋根塗装、学習塾、整体院。slug はテンプレート店と一致させる。 */
+export const DEMO_INDUSTRIES: { id: 'painting' | 'juku' | 'seitai'; label: string; slug: string }[] = [
+  { id: 'painting', label: '外壁・屋根塗装', slug: 'aoba' },
+  { id: 'juku', label: '学習塾', slug: 'midori' },
+  { id: 'seitai', label: '自費の整体院', slug: 'nozomi' },
 ];
 
 export const NOT_INCLUDED = ['LINE連携', '予約の確定', 'サイト制作', '訪問設定'];
@@ -151,11 +151,11 @@ export const TERMS_HEADINGS = [
   '準拠法',
 ];
 
-export const HERO_EYEBROW = '美容室・サロン、整体院向け　ホームページ用チャット';
+export const HERO_EYEBROW = '外壁塗装・学習塾・整体院向け';
 
-export const HERO_TITLE = 'お店のホームページで、よくある質問に答えます';
+export const HERO_TITLE = '電話に出られない時も、ホームページで受付';
 
-export const HERO_BODY = '営業中に繰り返し来る質問を、チャットで案内します。予約は、いま使っている予約ページへ案内し、ボットの中では確定しません。';
+export const HERO_BODY = '選択式で、用意した答えだけを返します。';
 
 export const HERO_NOTES = [
   '返信の目安は通常【〇営業日】以内です。いまは自動返信メールは送りません。',
@@ -163,13 +163,59 @@ export const HERO_NOTES = [
   'お店への訪問やビデオ通話はありません。',
 ];
 
-export const FACTS = [
-  'プランは3種類です（ライト・標準・充実）',
-  '下のチャットは、架空の店です',
-  '相談はフォームだけです（訪問・ビデオ通話なし）',
+export const FACTS = ['初期費用 0円', '月額 10,780円（税込）〜', '選択式で誤回答なし'];
+
+export const PROBLEMS: { title: string; body: string }[] = [
+  { title: '現場に出ると電話に出られない', body: '塗装の「いくらかかる？」は、作業中や夜にも届きます。折り返すころには、ほかの見積りに進んでいることがあります。' },
+  { title: '授業中は受話器を取れない', body: '塾は夕方から夜が授業です。講習の前は、授業料や体験の同じ質問が短時間に重なります。' },
+  { title: '施術中は手が離せない', body: '整体は施術のあいだ、初めての方の「流れは？」「保険は使える？」にその場で答えられません。' },
 ];
 
-export const PRICE_INTRO = '初期費用なし（設置・基本設定込み）。契約期間は12か月で、料金は毎月お支払いいただきます。税込を主に、税別を併記しています（税率10%）。12か月の合計も、月額と同じ大きさで示します。期間の途中で解約する場合も、残りの月数の料金をお支払いいただきます。自動更新は【未定】です。相談フォームの送信では決済しません。';
+export const SHIFTS: { step: string; title: string; before: string; after: string }[] = [
+  {
+    step: '01',
+    title: '機会損失の削減',
+    before: '営業時間外は電話に出られません。',
+    after: 'サイトで質問に答え、相談へつなぎます。',
+  },
+  {
+    step: '02',
+    title: '見積り・体験前の不安解消',
+    before: '料金の不安で、ページを閉じられます。',
+    after: 'よくある質問に、その場で答えます。',
+  },
+  {
+    step: '03',
+    title: '営業電話の不安',
+    before: '営業電話が心配で、足が止まります。',
+    after: 'チャットで先に確認できます。',
+  },
+];
+
+export const INDUSTRY_CARDS: { href: string; title: string; quote: string; body: string; cta: string; icon: 'paint' | 'book' | 'care' }[] = [
+  { href: '/demo/painting', title: '外壁・屋根塗装', quote: '外壁塗装っていくらくらい？', body: '概算・工期・塗料の質問に答えます。', cta: '塗装のデモを見る', icon: 'paint' },
+  { href: '/demo/juku', title: '学習塾', quote: '無料体験はできますか？', body: '授業料・体験・振替を案内します。', cta: '塾のデモを見る', icon: 'book' },
+  { href: '/demo/seitai', title: '自費整体院', quote: '初めてですが服装は？', body: '初回の流れ・料金・予約を案内します。', cta: '整体院のデモを見る', icon: 'care' },
+];
+
+export const ONBOARDING: { step: string; title: string; body: string }[] = [
+  { step: '01', title: 'デモを試す', body: 'その場で、業種デモを確認します。' },
+  { step: '02', title: '自社向けに調整', body: '質問と料金を、業務に合わせます。' },
+  { step: '03', title: 'サイトに公開', body: 'ホームページに設置して公開します。' },
+];
+
+export const HOME_FAQ: { question: string; answer: string }[] = [
+  { question: '初期費用はかかりますか', answer: '初期費用なし（設置・基本設定込み）です。料金は月額だけで、12か月の合計もプランのカードに同じ大きさで書いてあります。' },
+  { question: '12か月契約と、途中の解約は？', answer: '契約期間は12か月で、料金は毎月です。期間の途中で解約する場合も、残りの月数の料金をお支払いいただきます。手続きの期限は【未定】です。自動更新は【未定】です。' },
+  { question: '用意した答え以外は返しませんか', answer: '選択式です。お店が用意した質問と答えだけを返します。決まっていない質問は、電話・メール、または充実プランでは人への引き継ぎになります。' },
+  { question: 'いまのホームページに入れられますか', answer: '入れられます。サイトの作り直しはしません。既存の予約ページへ案内するだけで、ボットの中では予約を確定しません。' },
+  { question: 'デモと本番は違いますか', answer: 'このページの店名と料金は架空です。本番は、御社の公開情報に差し替えます。支払いの画面は、いまは未実装です。ご相談には通常【〇営業日】以内にメールで返信します。自動返信メールは送りません。' },
+];
+
+export const PRICE_CHIPS = ['初期費用 0円', '12か月契約・毎月払い', '途中解約は残月分', '税込表示（税別併記）・12か月合計'];
+
+/** 料金カードの外に置く短い注記。細則は /terms と /legal。 */
+export const PRICE_FOOTNOTE = '自動更新は【未定】です。相談フォームでは決済しません。';
 
 export function priceListText(): string {
   return SERVICE_PLANS.map((plan) => `${plan.name}は月額${yen(plan.monthlyTaxIn)}（税込、税別${yen(plan.monthlyTaxEx)}）、12か月の合計${yen(plan.termTotalTaxIn)}（税込）`).join('。') + '。' + INITIAL_FEE_NOTE + '。';

@@ -1,5 +1,7 @@
 import type { PlanId } from '../types';
 
+export type NicheId = 'painting' | 'juku' | 'seitai';
+
 export type Route =
   | { name: 'landing' }
   | { name: 'plans' }
@@ -7,7 +9,7 @@ export type Route =
   | { name: 'faq' }
   | { name: 'legal' }
   | { name: 'terms' }
-  | { name: 'demo'; plan: PlanId }
+  | { name: 'demo'; plan: PlanId; niche?: NicheId }
   | { name: 'widget'; plan: PlanId; slug?: string }
   | { name: 'admin' }
   | { name: 'consult' }
@@ -30,6 +32,8 @@ export function parseRoute(pathname: string): Route {
   if (path === '/privacy') return { name: 'privacy' };
   const reserve = /^\/reserve\/([a-z0-9-]+)$/.exec(path);
   if (reserve) return { name: 'reserve', slug: reserve[1] };
+  const niche = /^\/demo\/(painting|juku|seitai)$/.exec(path);
+  if (niche) return { name: 'demo', plan: 'standard', niche: niche[1] as NicheId };
   const demo = /^\/demo\/(light|standard|full)$/.exec(path);
   if (demo && PLANS.has(demo[1] as PlanId)) return { name: 'demo', plan: demo[1] as PlanId };
   const widget = /^\/widget\/(light|standard|full)(?:\/([a-z0-9-]+))?$/.exec(path);

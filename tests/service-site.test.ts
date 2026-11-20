@@ -2,8 +2,9 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { demoFaqs, demoMenu, demoShops } from '../src/data/demo-seed';
+import { templateByNiche } from '../src/data/templates';
 import { CONTRACT_MONTHS, DELIVERY_DAYS, DEMO_INDUSTRIES, REPLY_WINDOW, SERVICE_PLANS, UNDECIDED, yen } from '../src/content/service';
-import { corporateAiChatbot, corporateHome } from '../src/lib/corporate';
+import { corporateAiChatbot, corporateBase, corporateHome } from '../src/lib/corporate';
 import { parseRoute } from '../src/lib/route';
 import { allowsIndex, shouldNoindex } from '../src/lib/robots';
 import { mountDemo } from '../src/ui/pages';
@@ -17,7 +18,6 @@ const BANNED = [
   '間違った案内をする心配がありません',
   '24時間対応',
   'その場で必ず答える',
-  '取りこぼし',
   '確実に',
   '効率が何倍',
   '電話が半分',
@@ -32,7 +32,6 @@ const BANNED = [
   '治る',
   '改善する',
   '効果がある',
-  'おすすめ',
 ];
 
 describe('signup site', () => {
@@ -40,28 +39,48 @@ describe('signup site', () => {
     const view = landingView();
     const headings = Array.from(view.querySelectorAll('h1, h2')).map((node) => node.textContent);
     expect(headings).toEqual([
-      'お店のホームページで、よくある質問に答えます',
-      '同じ質問が、くり返し届くことがあります',
-      'ライト・標準・充実の3プランです',
-      '下のチャットに、質問を入れてみてください',
-      '相談から導入までの流れ',
+      '電話に出られない時間の「いくら？」に、ホームページが答えます',
+      'お客様が聞きたい時間に、お店は手が離せない',
+      '電話、問い合わせフォーム、受付ボットのちがい',
+      '夜9時の「外壁いくら？」は、こう受け付けます',
+      '3つの業種のデモを、いま試せます',
+      '答えの文面は、お店で直せます',
+      '業種ごとに、よく聞かれる質問を用意しています',
+      'できること、できないこと',
+      '初期費用0円。月額10,780円（税込）から',
+      '申し込みから公開まで',
       'よくある質問',
-      '相談も、Webだけで進められます',
+      'まずは、デモで動きを見てください',
     ]);
-    expect(view.textContent).toContain('美容室・サロン、整体院向け　ホームページ用チャット');
+    expect(view.textContent).toContain('お客様はボタンを選ぶだけ。お店が用意した答えだけを返す、選択式の受付チャットです。');
+    expect(view.textContent).toContain('自動更新は【未定】です。');
+    expect(view.textContent).toContain('相談フォームでは決済しません。');
+    expect(view.textContent).toContain('12か月契約・毎月払い');
+    expect(view.textContent).toContain('初期費用0円');
+    expect(view.textContent).toContain('おすすめ');
+    expect(view.textContent).not.toContain('予約フォーム連携');
+    expect(view.textContent).not.toContain('対話履歴');
+    expect(view.textContent).not.toContain('優先サポート');
+    expect(view.querySelector('a[href="/demo/painting"]')).not.toBeNull();
+    expect(view.querySelector('a[href="/demo/juku"]')).not.toBeNull();
+    expect(view.querySelector('a[href="/demo/seitai"]')).not.toBeNull();
+    expect(view.querySelector('.header-cta')?.textContent).toBe('導入を相談する');
+    expect(view.querySelector('.iphone')).not.toBeNull();
+    expect(view.querySelector('.cta-laptop')).toBeNull();
     expect(view.textContent).not.toContain('飲食店・美容室・整体院');
+    expect(view.textContent).not.toContain('美容室・サロン');
     const industries = Array.from(view.querySelectorAll('[aria-label="業種"] button')).map((node) => node.textContent);
-    expect(industries).toEqual(['美容室・サロン', '整体院', '飲食店']);
+    expect(industries).toEqual(['外壁・屋根塗装', '学習塾', '自費の整体院']);
     for (const tab of DEMO_INDUSTRIES) {
-      expect(demoShops.find((shop) => shop.industry === tab.id)?.slug).toBe(tab.slug);
+      expect(templateByNiche(tab.id).shop.slug).toBe(tab.slug);
     }
-    const logos = Array.from(view.querySelectorAll('img'));
+    const logos = Array.from(view.querySelectorAll('img.brand-logo'));
     expect(logos.length).toBeGreaterThan(0);
     for (const logo of logos) {
       expect(logo.getAttribute('alt')).toBe('ARK');
       expect(logo.getAttribute('src')).toBe('/brand/ark-logo.webp');
     }
-    expect(view.querySelectorAll('a[aria-label="ARK ホーム"]')).toHaveLength(2);
+    expect(view.querySelectorAll('a[aria-label="ARK ホーム"]')).toHaveLength(1);
     for (const plan of SERVICE_PLANS) {
       expect(plan.monthlyTaxIn).toBe(Math.round(plan.monthlyTaxEx * 1.1));
       expect(plan.termTotalTaxIn).toBe(plan.monthlyTaxIn * CONTRACT_MONTHS);
@@ -69,34 +88,41 @@ describe('signup site', () => {
       expect(view.textContent).toContain(`税別 ${yen(plan.monthlyTaxEx)}`);
       expect(view.textContent).toContain(`12か月の合計 ${yen(plan.termTotalTaxIn)}（税込）`);
     }
-    expect(view.textContent).toContain('初期費用なし（設置・基本設定込み）');
+    expect(view.textContent).toContain('初期費用0円（設置・基本設定込み）');
     expect(view.textContent).not.toContain('月1回まで無料です');
     expect(view.textContent).not.toContain('残り回数を表示します');
     expect(view.textContent).not.toContain('3つのプランから選べ');
     expect(view.textContent).not.toContain('実際に触って');
     expect(view.textContent).not.toContain('向いている相手');
     expect(view.textContent).not.toContain('モニター');
-    expect(view.textContent).toContain('デモで最初に表示するプラン');
-    expect(view.textContent).not.toContain('おすすめ');
+    const standardTab = Array.from(view.querySelectorAll('[aria-label="プラン"] button')).find((node) => node.textContent === '標準');
+    expect(standardTab?.getAttribute('aria-selected')).toBe('true');
+    expect(view.textContent).not.toContain('デモで最初に表示するプラン');
+    expect(view.querySelector('.plan-card.is-recommended .recommend-badge')?.textContent).toBe('おすすめ');
     const frames = view.querySelectorAll('iframe');
     expect(frames).toHaveLength(1);
     expect(frames[0]?.getAttribute('loading')).toBe('lazy');
-    expect(frames[0]?.getAttribute('src')).toBe('/widget/standard/lumiere');
+    expect(frames[0]?.getAttribute('src')).toBe('/widget/standard/aoba');
     const expand = view.querySelector('.demo-expand');
-    expect(expand?.textContent).toBe('別ページで大きく見る');
-    expect(expand?.getAttribute('href')).toBe('/demo/standard');
+    expect(expand?.textContent).toBe('大きな画面で開く');
+    expect(expand?.getAttribute('href')).toBe('/demo/painting');
+    expect(view.textContent).toContain('この業種で相談する');
     expect(frames[0]?.parentElement?.contains(expand)).toBe(false);
     expect(view.textContent).toContain('実在のお店とは関係ありません');
-    expect(view.textContent).toContain('いまは未実装です');
+    expect(view.textContent).toContain('支払い画面は準備中です');
     expect(view.textContent).toContain(REPLY_WINDOW);
     const nav = Array.from(view.querySelectorAll('.nav a')).map((node) => node.getAttribute('href'));
-    expect(nav).toEqual(['/', '/plans', '/flow', '/faq', '/consult']);
+    expect(nav).toEqual(['/#how', '/#demo', '/#plans', '/#flow', '/#faq']);
+    expect(view.querySelectorAll('.nav a[href="/consult"]')).toHaveLength(0);
+    expect(view.querySelectorAll('.header-cta')).toHaveLength(1);
     expect(view.querySelector('a[href="/admin"]')).toBeNull();
     expect(view.querySelector('a[href="/pay"]')).toBeNull();
     expect(view.querySelector('a[href^="/widget/"]')).toBeNull();
     expect(view.querySelector('a[href^="/reserve"]')).toBeNull();
     expect(view.querySelector('a[href="/consult"]')).not.toBeNull();
     expect(view.querySelector('a[href="/consult?plan=light"]')).not.toBeNull();
+    expect(corporateBase('')).toBe('https://arktechlab.com');
+    expect(corporateBase('https://example.com/')).toBe('https://example.com');
     expect(view.querySelector(`a[href="${corporateHome()}"]`)).not.toBeNull();
     expect(view.querySelector(`a[href="${corporateAiChatbot()}"]`)).not.toBeNull();
     for (const phrase of BANNED) expect(view.textContent).not.toContain(phrase);
@@ -104,25 +130,25 @@ describe('signup site', () => {
 
   it('switches the single widget when the industry or plan changes', () => {
     const view = landingView();
-    const food = Array.from(view.querySelectorAll('[aria-label="業種"] button')).find((node) => node.textContent === '飲食店') as HTMLButtonElement;
-    food.click();
+    const juku = Array.from(view.querySelectorAll('[aria-label="業種"] button')).find((node) => node.textContent === '学習塾') as HTMLButtonElement;
+    juku.click();
     const frame = view.querySelector('iframe');
     expect(view.querySelectorAll('iframe')).toHaveLength(1);
-    expect(frame?.getAttribute('src')).toBe('/widget/standard/komorebi');
+    expect(frame?.getAttribute('src')).toBe('/widget/standard/midori');
     const full = Array.from(view.querySelectorAll('[aria-label="プラン"] button')).find((node) => node.textContent === '充実') as HTMLButtonElement;
     full.click();
     expect(view.querySelectorAll('iframe')).toHaveLength(1);
-    expect(frame?.getAttribute('src')).toBe('/widget/full/komorebi');
-    expect(view.querySelector('.demo-expand')?.getAttribute('href')).toBe('/demo/full');
-    food.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
-    expect(frame?.getAttribute('src')).toBe('/widget/full/yasuragi');
-    expect(food.getAttribute('aria-selected')).toBe('false');
+    expect(frame?.getAttribute('src')).toBe('/widget/full/midori');
+    expect(view.querySelector('.demo-expand')?.getAttribute('href')).toBe('/demo/juku');
+    juku.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    expect(frame?.getAttribute('src')).toBe('/widget/full/aoba');
+    expect(juku.getAttribute('aria-selected')).toBe('false');
   });
 
   it('states current limits on plans, flow, faq, legal, and terms', () => {
     const plans = plansView();
     expect(plans.querySelector('h1')?.textContent).toBe('プランと料金');
-    expect(plans.textContent).toContain('相談フォームの送信では決済しません');
+    expect(plans.textContent).toContain('相談フォームでは決済しません');
     expect(plans.textContent).toContain('129,360円');
     expect(plans.textContent).toContain('261,360円');
     expect(plans.textContent).toContain('393,360円');
@@ -193,12 +219,15 @@ describe('signup site', () => {
     for (const path of ['/admin', '/admin/settings', '/widget/full', '/widget/full/komorebi', '/reserve/komorebi', '/shop-demo', '/shop-demo/lumiere', '/nonexistent', '/sitemap.xml']) {
       expect(shouldNoindex(path, true)).toBe(true);
     }
-    for (const path of ['/', '/plans', '/flow', '/faq', '/consult', '/apply', '/privacy', '/legal', '/terms', '/demo/light', '/demo/standard', '/demo/full']) {
+    for (const path of ['/', '/plans', '/flow', '/faq', '/consult', '/apply', '/privacy', '/legal', '/terms', '/demo/light', '/demo/standard', '/demo/full', '/demo/painting', '/demo/juku', '/demo/seitai']) {
       expect(shouldNoindex(path, true)).toBe(false);
       expect(parseRoute(path).name).not.toBe('notfound');
     }
     const html = readFileSync('index.html', 'utf8');
     expect(html).toMatch(/<meta\s+name="robots"\s+content="noindex,\s*nofollow"\s*\/>/);
+    expect(html).toContain('fonts.googleapis.com');
+    expect(html).toContain('family=Inter:wght@600;700;800');
+    expect(html).toContain('family=Noto+Sans+JP:wght@400;500;700;900');
     expect(html).toContain('name="description"');
     expect(html).toContain('property="og:title"');
     expect(html).toContain('property="og:image"');

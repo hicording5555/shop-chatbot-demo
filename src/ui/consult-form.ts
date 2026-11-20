@@ -4,7 +4,7 @@ import { cleanConsultSiteUrl, contactOk, japanesePhoneOk } from '../../supabase/
 import { el } from './dom';
 import { CAPTCHA_FAILED_MESSAGE, TURNSTILE_WAITING_MESSAGE, TURNSTILE_WIDGET_ERROR_MESSAGE, mountTurnstile, type TurnstileHandle } from './turnstile';
 
-const INDUSTRIES = ['美容室・サロン', '整体院', '整骨院・鍼灸院', '飲食店', 'その他'] as const;
+const INDUSTRIES = ['外壁・屋根塗装', '学習塾', '整体院', 'その他'] as const;
 const PLANS = ['ライト', '標準', '充実', 'まだ決めていない'] as const;
 const KINDS = ['まず話を聞きたい', '通常の申し込み'] as const;
 
