@@ -39,7 +39,7 @@ describe('signup site', () => {
     const view = landingView();
     const headings = Array.from(view.querySelectorAll('h1, h2')).map((node) => node.textContent);
     expect(headings).toEqual([
-      '電話に出られない時間の問い合わせ、ホームページ上で自動受付',
+      '電話に出られない時も、ホームページで受付',
       '仕組みは、この3つです',
       '今すぐ、3業種を切り替えられます',
       '業種ごとの受付を、その場でお試しください',
@@ -49,7 +49,9 @@ describe('signup site', () => {
       'よくある質問',
       'まずは、動く実物をご覧ください',
     ]);
-    expect(view.textContent).toContain('選択式で用意した答えだけを返すので、文面がぶれません。');
+    expect(view.textContent).toContain('選択式で、用意した答えだけを返します。');
+    expect(view.textContent).toContain('自動更新は【未定】です。相談フォームでは決済しません。');
+    expect(view.textContent).toContain('12か月契約・毎月払い');
     expect(view.textContent).toContain('初期費用 0円');
     expect(view.textContent).toContain('おすすめ');
     expect(view.textContent).not.toContain('予約フォーム連携');
@@ -142,7 +144,7 @@ describe('signup site', () => {
   it('states current limits on plans, flow, faq, legal, and terms', () => {
     const plans = plansView();
     expect(plans.querySelector('h1')?.textContent).toBe('プランと料金');
-    expect(plans.textContent).toContain('相談フォームの送信では決済しません');
+    expect(plans.textContent).toContain('相談フォームでは決済しません');
     expect(plans.textContent).toContain('129,360円');
     expect(plans.textContent).toContain('261,360円');
     expect(plans.textContent).toContain('393,360円');

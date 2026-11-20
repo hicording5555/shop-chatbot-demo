@@ -153,9 +153,9 @@ export const TERMS_HEADINGS = [
 
 export const HERO_EYEBROW = '外壁塗装・学習塾・整体院向け';
 
-export const HERO_TITLE = '電話に出られない時間の問い合わせ、ホームページ上で自動受付';
+export const HERO_TITLE = '電話に出られない時も、ホームページで受付';
 
-export const HERO_BODY = '外壁塗装・学習塾・整体院向け。選択式で用意した答えだけを返すので、文面がぶれません。';
+export const HERO_BODY = '選択式で、用意した答えだけを返します。';
 
 export const HERO_NOTES = [
   '返信の目安は通常【〇営業日】以内です。いまは自動返信メールは送りません。',
@@ -175,33 +175,33 @@ export const SHIFTS: { step: string; title: string; before: string; after: strin
   {
     step: '01',
     title: '機会損失の削減',
-    before: '営業時間外や仕事中に電話へ出られず、見積りや体験の相談が残ります。',
-    after: 'ホームページ上で用意した質問に答え、相談へつなぎます。',
+    before: '営業時間外は電話に出られません。',
+    after: 'サイトで質問に答え、相談へつなぎます。',
   },
   {
     step: '02',
     title: '見積り・体験前の不安解消',
-    before: '料金や工事、体験の前に不安が残ると、ページを閉じてしまいます。',
-    after: 'よくある質問にその場で答え、次の一歩へ進めます。',
+    before: '料金の不安で、ページを閉じられます。',
+    after: 'よくある質問に、その場で答えます。',
   },
   {
     step: '03',
-    title: '営業電話への心理的ハードル低減',
-    before: '問い合わせのあと、しつこい営業電話が来そうで足が止まります。',
-    after: 'チャットで先に確認できるので、問い合わせの第一歩が軽くなります。',
+    title: '営業電話の不安',
+    before: '営業電話が心配で、足が止まります。',
+    after: 'チャットで先に確認できます。',
   },
 ];
 
 export const INDUSTRY_CARDS: { href: string; title: string; quote: string; body: string; cta: string; icon: 'paint' | 'book' | 'care' }[] = [
-  { href: '/demo/painting', title: '外壁・屋根塗装', quote: '外壁塗装っていくらくらい？', body: '概算、現地調査、工期・天候、塗料・色など、よくある質問に答えます。', cta: '塗装のデモを見る', icon: 'paint' },
-  { href: '/demo/juku', title: '学習塾', quote: '無料体験はできますか？', body: '授業料、体験授業、振替、テスト・受験対策などを案内します。', cta: '塾のデモを見る', icon: 'book' },
-  { href: '/demo/seitai', title: '自費整体院', quote: '初めてですが服装は？', body: '初回の流れ、料金・時間、着替え、予約・キャンセルなどを案内します。', cta: '整体院のデモを見る', icon: 'care' },
+  { href: '/demo/painting', title: '外壁・屋根塗装', quote: '外壁塗装っていくらくらい？', body: '概算・工期・塗料の質問に答えます。', cta: '塗装のデモを見る', icon: 'paint' },
+  { href: '/demo/juku', title: '学習塾', quote: '無料体験はできますか？', body: '授業料・体験・振替を案内します。', cta: '塾のデモを見る', icon: 'book' },
+  { href: '/demo/seitai', title: '自費整体院', quote: '初めてですが服装は？', body: '初回の流れ・料金・予約を案内します。', cta: '整体院のデモを見る', icon: 'care' },
 ];
 
 export const ONBOARDING: { step: string; title: string; body: string }[] = [
-  { step: '01', title: 'デモを試す', body: '業種テンプレートの動きを、その場で確認できます。' },
-  { step: '02', title: '自社向けに調整', body: '質問・回答と料金表を、実際の業務に合わせます。' },
-  { step: '03', title: 'サイトに公開', body: 'ホームページへ設置し、受付を開始できます。' },
+  { step: '01', title: 'デモを試す', body: 'その場で、業種デモを確認します。' },
+  { step: '02', title: '自社向けに調整', body: '質問と料金を、業務に合わせます。' },
+  { step: '03', title: 'サイトに公開', body: 'ホームページに設置して公開します。' },
 ];
 
 export const HOME_FAQ: { question: string; answer: string }[] = [
@@ -212,10 +212,10 @@ export const HOME_FAQ: { question: string; answer: string }[] = [
   { question: 'デモと本番は違いますか', answer: 'このページの店名と料金は架空です。本番は、御社の公開情報に差し替えます。支払いの画面は、いまは未実装です。ご相談には通常【〇営業日】以内にメールで返信します。自動返信メールは送りません。' },
 ];
 
-export const PRICE_INTRO = '初期費用なし（設置・基本設定込み）。契約期間は12か月で、料金は毎月お支払いいただきます。税込を主に、税別を併記しています（税率10%）。12か月の合計も、月額と同じ大きさで示します。期間の途中で解約する場合も、残りの月数の料金をお支払いいただきます。自動更新は【未定】です。相談フォームの送信では決済しません。';
+export const PRICE_CHIPS = ['初期費用 0円', '12か月契約・毎月払い', '途中解約は残月分', '税込表示（税別併記）・12か月合計'];
 
 /** 料金カードの外に置く短い注記。細則は /terms と /legal。 */
-export const PRICE_FOOTNOTE = '初期費用なし（設置・基本設定込み）。契約期間は12か月で、料金は毎月お支払いいただきます。期間の途中で解約する場合も、残りの月数の料金をお支払いいただきます。自動更新は【未定】です。相談フォームの送信では決済しません。';
+export const PRICE_FOOTNOTE = '自動更新は【未定】です。相談フォームでは決済しません。';
 
 export function priceListText(): string {
   return SERVICE_PLANS.map((plan) => `${plan.name}は月額${yen(plan.monthlyTaxIn)}（税込、税別${yen(plan.monthlyTaxEx)}）、12か月の合計${yen(plan.termTotalTaxIn)}（税込）`).join('。') + '。' + INITIAL_FEE_NOTE + '。';

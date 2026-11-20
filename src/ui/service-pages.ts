@@ -9,13 +9,14 @@ import {
   FICTIONAL_SHOP,
   FUTURE_CHANGES,
   HERO_BODY,
+  HERO_EYEBROW,
   HERO_TITLE,
   HOME_FAQ,
   INDUSTRY_CARDS,
   ONBOARDING,
   INITIAL_FEE_NOTE,
   LEGAL_ITEMS,
-  NOT_INCLUDED,
+  PRICE_CHIPS,
   PRICE_FOOTNOTE,
   REPLY_WINDOW,
   SHIFTS,
@@ -139,6 +140,7 @@ function hero(): HTMLElement {
   return el('section', { class: 'hero' }, [
     el('div', { class: 'wrap hero-grid' }, [
       el('div', { class: 'hero-copy' }, [
+        el('p', { class: 'eyebrow' }, [HERO_EYEBROW]),
         el('p', { class: 'offer-pill' }, ['初期費用 0円・月額 10,780円（税込）〜']),
         el('h1', null, [
           el('span', { class: 'hero-line' }, [`${lead}、`]),
@@ -149,34 +151,57 @@ function hero(): HTMLElement {
           el('a', { class: 'button', href: '#demo' }, ['デモを試す']),
           el('a', { class: 'button ghost', href: '/consult' }, ['導入相談をする']),
         ]),
-        el('p', { class: 'hero-note' }, ['今すぐサイト上で動く実物デモをご覧いただけます。']),
       ]),
       deviceStage(),
     ]),
   ]);
 }
 
-const MOCK_QUESTIONS = ['外壁塗装っていくらくらい？', '無料体験はできますか？', '初めてですが服装は？'];
-
 function deviceStage(): HTMLElement {
-  return el('div', { class: 'device-stage', 'aria-hidden': 'true' }, [
-    el('div', { class: 'phone' }, [
-      el('div', { class: 'phone-notch' }, []),
-      el('div', { class: 'phone-bar' }, ['受付ボット']),
-      el('p', { class: 'mock-lead' }, ['質問を選んでください。']),
-      ...MOCK_QUESTIONS.map((label) => el('div', { class: 'mock-choice' }, [label])),
-    ]),
-    el('div', { class: 'browser-window' }, [
-      el('div', { class: 'browser-bar' }, [
-        el('span', null, ['受付ボット']),
-        el('span', { class: 'browser-controls' }, ['—  ×']),
+  const screen = el('div', { class: 'hero-screen' }, [
+    el('div', { class: 'shop-mini' }, [
+      el('div', { class: 'shop-nav' }, [
+        el('strong', null, ['あおば塗装']),
+        el('span', null, ['メニュー']),
       ]),
-      el('p', { class: 'mock-lead' }, ['外壁塗装の概算です。']),
-      el('div', { class: 'mock-reply' }, [
-        el('p', { class: 'mock-price' }, ['78万〜108万円（税込）']),
-        el('p', null, ['戸建て2階・外壁のみ。']),
-        el('p', null, ['足場と高圧洗浄を含みます。']),
-        el('p', null, ['金額は現地調査で確定します。']),
+      el('img', { class: 'shop-visual', src: paintingArt, alt: '' }),
+      el('p', null, ['外壁の概算を、チャットで。']),
+    ]),
+    el('div', { class: 'chat-sheet' }, [
+      el('span', { class: 'sheet-grab' }, []),
+      el('p', { class: 'bubble bot' }, ['ご用件を選んでください。']),
+      el('p', { class: 'bubble user' }, ['外壁塗装っていくらくらい？']),
+      el('div', { class: 'bubble bot' }, [
+        el('p', { class: 'bubble-price' }, ['78万〜108万円（税込）']),
+        el('p', null, ['金額は現地調査で確定。']),
+      ]),
+    ]),
+  ]);
+  return el('div', { class: 'hero-stage device-stage', 'aria-hidden': 'true' }, [
+    iphone(screen, true),
+  ]);
+}
+
+function iphone(screen: HTMLElement, home: boolean): HTMLElement {
+  const status = el('div', { class: 'ios-status' }, [
+    el('span', { class: 'ios-time' }, ['9:41']),
+    el('span', { class: 'ios-island' }, []),
+    el('span', { class: 'ios-right' }, []),
+  ]);
+  const right = status.querySelector('.ios-right');
+  if (right) {
+    right.innerHTML = '<svg viewBox="0 0 18 12" width="17" height="12" aria-hidden="true"><rect x="0" y="8" width="3" height="4" rx=".5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx=".5" fill="currentColor"/><rect x="10" y="2.5" width="3" height="9.5" rx=".5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx=".5" fill="currentColor"/></svg><span class="ios-gen">5G</span><svg viewBox="0 0 28 13" width="26" height="13" aria-hidden="true"><rect x=".8" y=".8" width="22" height="11.4" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2.4" y="2.4" width="16" height="8.2" rx="1.4" fill="currentColor"/><rect x="24.2" y="4" width="2.2" height="5" rx="1" fill="currentColor"/></svg>';
+  }
+  return el('div', { class: 'iphone' }, [
+    el('span', { class: 'iphone-btn silent' }, []),
+    el('span', { class: 'iphone-btn vol-up' }, []),
+    el('span', { class: 'iphone-btn vol-down' }, []),
+    el('span', { class: 'iphone-btn power' }, []),
+    el('div', { class: 'iphone-bezel' }, [
+      el('div', { class: 'iphone-screen' }, [
+        status,
+        screen,
+        ...(home ? [el('div', { class: 'home-indicator' }, [])] : []),
       ]),
     ]),
   ]);
@@ -197,7 +222,7 @@ function howSection(): HTMLElement {
     ]));
     if (index < nodes.length - 1) row.append(el('div', { class: 'how-arrow', 'aria-hidden': 'true' }, ['→']));
   });
-  return el('section', { class: 'block how', id: 'how' }, [
+  return el('section', { class: 'block how band', id: 'how' }, [
     el('div', { class: 'wrap' }, [
       el('h2', null, ['仕組みは、この3つです']),
       row,
@@ -248,15 +273,14 @@ function plansSection(onHome: boolean): HTMLElement {
       ...(onHome ? [priceHero()] : []),
       el('div', { class: 'plan-grid' }, SERVICE_PLANS.map((plan) => planCard(plan))),
       el('div', { class: 'compare-scroll' }, [compareTable()]),
+      el('p', { class: 'price-footnote' }, [PRICE_FOOTNOTE]),
       el('p', { class: 'price-footnote' }, [
-        PRICE_FOOTNOTE,
         '詳細は',
         el('a', { href: '/terms' }, ['利用規約']),
         'と',
         el('a', { href: '/legal' }, ['特定商取引法に基づく表記']),
-        'に書いています。',
+        'です。',
       ]),
-      el('p', { class: 'price-footnote' }, [`含まれないもの：${NOT_INCLUDED.join('、')}。`]),
       ...(onHome
         ? [el('div', { class: 'cta-row' }, [el('a', { class: 'button ghost', href: '/plans' }, ['プランの詳細'])])]
         : []),
@@ -276,7 +300,7 @@ function priceHero(): HTMLElement {
       el('span', { class: 'num' }, [digits]),
       '円（税込）から',
     ]),
-    el('p', { class: 'price-hero-note' }, ['プランは3つ。12か月の合計も、月額と同じ大きさで並記しています。']),
+    el('ul', { class: 'fact-chips' }, PRICE_CHIPS.map((chip) => el('li', null, [chip]))),
   ]);
 }
 
@@ -335,7 +359,7 @@ function demoSection(): HTMLElement {
     class: 'demo-stage',
     role: 'tabpanel',
     'aria-labelledby': 'demo-industry-0',
-  }, [frame]);
+  }, [el('div', { class: 'demo-device' }, [iphone(frame, false)])]);
   function sync(): void {
     frame.src = widgetPath(plan, industry.slug);
     frame.title = `架空の店のチャット（${industry.label}・${PLAN_LABEL[plan]}）`;
@@ -357,7 +381,7 @@ function demoSection(): HTMLElement {
   return el('section', { class: 'block demo-block', id: 'demo' }, [
     el('div', { class: 'wrap' }, [
       el('h2', null, ['今すぐ、3業種を切り替えられます']),
-      el('p', null, [`${FICTIONAL_SHOP}業種とプランを切り替えて、質問を選んでください。予約は既存のページへ案内するだけで、ボットの中では確定しません。`]),
+      el('p', null, [FICTIONAL_SHOP, '質問を選んで、動きを確認できます。']),
       el('div', { class: 'tablist', role: 'tablist', 'aria-label': '業種' }, industryTabs),
       el('div', { class: 'tablist', role: 'tablist', 'aria-label': 'プラン' }, planTabs),
       planNote,
@@ -530,7 +554,7 @@ function icon(name: IconName): HTMLElement {
     tap: '<rect x="16" y="6" width="16" height="28" rx="3" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M22 34h4" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
     check: '<path d="M10 16h20a6 6 0 0 1 6 6v8a6 6 0 0 1-6 6H16l-6 6v-6a6 6 0 0 1-0-0" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M16 26l4 4 8-8" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
     calendar: '<rect x="10" y="12" width="28" height="24" rx="3" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M10 20h28M18 8v8M30 8v8M32 30l6 6" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
-    missed: '<path d="M14 18l20 14M34 18L14 32" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/><rect x="10" y="12" width="28" height="24" rx="6" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/>',
+    missed: '<rect x="16" y="6" width="14" height="28" rx="3" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M21 28h4" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/><circle cx="33" cy="15" r="7" fill="#fff" stroke="#1B50C2" stroke-width="2"/><path d="M30 15h6" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
     worry: '<circle cx="24" cy="24" r="14" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M18 20h.1M30 20h.1M18 30c2-3 10-3 12 0" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
     hesitate: '<rect x="16" y="8" width="16" height="28" rx="3" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M20 18h8M22 28h4" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
     reply: '<path d="M8 14h24a6 6 0 0 1 6 6v6a6 6 0 0 1-6 6H16l-8 6v-6" fill="#DBEAFE" stroke="#1B50C2" stroke-width="2"/><path d="M16 24l4 4 8-8" stroke="#1B50C2" stroke-width="2" stroke-linecap="round"/>',
