@@ -509,7 +509,7 @@ function finalCta(): HTMLElement {
           el('span', null, [`相談フォームを送るだけで、決済はしません。${REPLY_WINDOW}にメールで返信します。`]),
         ]),
       ]),
-      el('p', { class: 'shot-caption light' }, ['初期費用0円（設置・基本設定込み）・月額10,780円（税込）から・12か月契約']),
+      el('p', { class: 'final-note' }, ['初期費用0円（設置・基本設定込み）・月額10,780円（税込）から・12か月契約']),
     ]),
   ]);
 }
